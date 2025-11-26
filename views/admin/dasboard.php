@@ -125,6 +125,15 @@ $menus = [
                 <?php endforeach; ?>
             </div>
 
+            <div class="pt-2 pb-10">
+                <a href="../logout.php" class="w-full inline-flex items-center justify-center gap-2 bg-white text-gray-900 font-semibold px-4 py-3 rounded-2xl shadow-sm hover:bg-gray-100 transition">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a2 2 0 11-4 0v-1m0-8V7a2 2 0 114 0v1" />
+                    </svg>
+                    Logout
+                </a>
+            </div>
+
         </div>
 
     </div>

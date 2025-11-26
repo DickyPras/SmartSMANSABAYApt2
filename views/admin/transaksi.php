@@ -125,10 +125,24 @@ foreach($data_transaksi as $t) {
                     <div class="flex items-center justify-between border-t border-gray-100 pt-3">
                         <span class="text-xs text-gray-500 font-medium"><?= $row['items'] ?> Barang</span>
                         
-                        <span class="flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-lg border <?= $statusClass ?>">
-                            <?= $iconStatus ?>
-                            <?= $row['status'] ?>
-                        </span>
+                        <div class="flex items-center gap-2">
+                            <span class="flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-lg border <?= $statusClass ?>">
+                                <?= $iconStatus ?>
+                                <?= $row['status'] ?>
+                            </span>
+                            <div class="flex gap-1">
+                                <a href="../../process/admin/edit_transaksi.php?invoice=<?= urlencode($row['no_invoice']) ?>" class="bg-yellow-50 text-yellow-600 p-1.5 rounded-lg hover:bg-yellow-100 transition" title="Edit transaksi">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                    </svg>
+                                </a>
+                                <a href="../../process/admin/hapus_transaksi.php?invoice=<?= urlencode($row['no_invoice']) ?>" class="bg-red-50 text-red-600 p-1.5 rounded-lg hover:bg-red-100 transition" title="Hapus transaksi" onclick="return confirm('Hapus transaksi ini?')">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                </a>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <?php endforeach; ?>
@@ -136,7 +150,7 @@ foreach($data_transaksi as $t) {
         </div>
 
         <div class="absolute bottom-6 left-0 right-0 px-6 z-30">
-            <a href="tambah_transaksi.php" class="bg-gray-900 text-white w-full py-4 rounded-2xl shadow-xl flex items-center justify-center gap-3 hover:bg-gray-800 transition active:scale-95 group">
+            <a href="../../process/admin/tambah_transaksi.php" class="bg-gray-900 text-white w-full py-4 rounded-2xl shadow-xl flex items-center justify-center gap-3 hover:bg-gray-800 transition active:scale-95 group">
                 <div class="bg-white/20 p-1 rounded-full">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />

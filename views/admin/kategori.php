@@ -75,7 +75,7 @@ $data_kategori = [
                     </svg>
                 </a>
                 <h1 class="text-xl font-bold text-gray-900">Kategori Produk</h1>
-                <a href="tambah_kategori.php" class="bg-gray-900 text-white p-2 rounded-xl shadow-lg hover:scale-105 transition">
+                <a href="../../process/admin/tambah_kategori.php" class="bg-gray-900 text-white p-2 rounded-xl shadow-lg hover:scale-105 transition">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                     </svg>
@@ -117,14 +117,14 @@ $data_kategori = [
                     </div>
 
                     <div class="absolute bottom-0 right-0 p-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-                        <a href="edit_kategori.php?id=<?= $row['id'] ?>" class="bg-yellow-100 p-1.5 rounded-lg text-yellow-600"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg></a>
-                        <a href="hapus_kategori.php?id=<?= $row['id'] ?>" class="bg-red-100 p-1.5 rounded-lg text-red-600" onclick="return confirm('Hapus?')"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></a>
+                        <a href="../../process/admin/edit_kategori.php?id=<?= $row['id'] ?>" class="bg-yellow-100 p-1.5 rounded-lg text-yellow-600"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg></a>
+                        <a href="../../process/admin/hapus_kategori.php?id=<?= $row['id'] ?>" class="bg-red-100 p-1.5 rounded-lg text-red-600" onclick="return confirm('Hapus?')"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></a>
                     </div>
 
                 </div>
                 <?php endforeach; ?>
 
-                <a href="tambah_kategori.php" class="border-2 border-dashed border-gray-300 rounded-3xl flex flex-col items-center justify-center text-gray-400 hover:border-yellow-400 hover:text-yellow-500 hover:bg-yellow-50 transition h-40">
+                <a href="../../process/admin/tambah_kategori.php" class="border-2 border-dashed border-gray-300 rounded-3xl flex flex-col items-center justify-center text-gray-400 hover:border-yellow-400 hover:text-yellow-500 hover:bg-yellow-50 transition h-40">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                     </svg>
