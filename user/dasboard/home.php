@@ -3,11 +3,11 @@ session_start();
 
 include '../database/data_produk.php'; 
 
-// LOGIKA TAMBAH KERANJANG 
+// --- 1. LOGIKA TAMBAH KERANJANG ---
 if (isset($_POST['tambah_keranjang'])) {
     $id_produk = $_POST['product_id'];
     
-    // parameter URL saat ini agar saat refresh filter/search tidak hilang
+    // Ambil parameter URL agar filter/search tidak hilang saat refresh
     $current_params = $_GET;
     unset($current_params['tambah_keranjang']); 
     $query_string = http_build_query($current_params);
@@ -33,16 +33,14 @@ if (isset($_POST['tambah_keranjang'])) {
         }
         $_SESSION['notif'] = "Berhasil menambahkan " . $produk_terpilih['name'];
         
-        // Redirect dengan query string yang sama agar pencarian tidak reset
+        // Redirect kembali
         header("Location: home.php?" . $query_string);
         exit;
     }
 }
 
-// LOGIKA FILTER (KATEGORI & PENCARIAN)
+// --- 2. LOGIKA FILTER (KATEGORI & PENCARIAN) ---
 $filtered_products = [];
-
-// Ambil input dari URL
 $kategori_aktif = isset($_GET['kategori']) ? $_GET['kategori'] : 'all';
 $keyword        = isset($_GET['keyword']) ? $_GET['keyword'] : '';
 
@@ -53,27 +51,24 @@ $mapKategori = [
     'frozen'  => 'Makanan Beku'
 ];
 
-// Logic Filtering Utama
 foreach ($products as $p) {
     $lolos_kategori = true;
     $lolos_keyword  = true;
 
-    // A. Cek Kategori
+    // Cek Kategori
     if ($kategori_aktif != 'all' && isset($mapKategori[$kategori_aktif])) {
         $target_cat = $mapKategori[$kategori_aktif];
-        $judul_section = $target_cat; // Ubah judul section
-        
+        $judul_section = $target_cat;
         if ($p['category'] !== $target_cat) {
             $lolos_kategori = false;
         }
     }
 
-    // B. Cek Keyword Pencarian (stripos = case insensitive)
+    // Cek Keyword
     if (!empty($keyword)) {
         if (stripos($p['name'], $keyword) === false) {
             $lolos_keyword = false;
         }
-        // Update judul jika sedang mencari
         $judul_section = "Hasil pencarian: \"" . htmlspecialchars($keyword) . "\"";
     }
 
@@ -103,12 +98,13 @@ if(isset($_SESSION['keranjang'])) {
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     
     <style>
-        /* --- COPY STYLE DARI SEBELUMNYA (TIDAK BERUBAH) --- */
+        /* --- GLOBAL STYLE --- */
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; -webkit-tap-highlight-color: transparent; }
         body { background-color: #F8F9FD; padding-bottom: 100px; overflow-x: hidden; }
         a { text-decoration: none; }
         button { border: none; outline: none; background: none; cursor: pointer; }
 
+        /* --- HEADER --- */
         .header {
             background-color: #00A859; padding: 25px 20px 30px 20px;
             border-bottom-left-radius: 30px; border-bottom-right-radius: 30px;
@@ -124,7 +120,7 @@ if(isset($_SESSION['keranjang'])) {
             border: 1px solid rgba(255,255,255,0.1);
         }
 
-        /* SEARCH FIXED */
+        /* --- SEARCH --- */
         .search-wrapper { position: relative; width: 100%; }
         .search-input {
             width: 100%; padding: 16px 20px 16px 50px; border-radius: 18px; border: none; outline: none;
@@ -133,6 +129,7 @@ if(isset($_SESSION['keranjang'])) {
         }
         .search-icon { position: absolute; left: 18px; top: 50%; transform: translateY(-50%); color: #00A859; font-size: 18px; pointer-events: none;}
 
+        /* --- CONTENT --- */
         .main-content { padding: 25px 20px; }
 
         .promo-card {
@@ -151,6 +148,7 @@ if(isset($_SESSION['keranjang'])) {
         .section-title { font-size: 18px; font-weight: 700; color: #2d3436; }
         .section-link { font-size: 12px; font-weight: 600; color: #00A859; }
 
+        /* --- KATEGORI --- */
         .category-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 30px; }
         .cat-card {
             position: relative; height: 110px; border-radius: 20px; padding: 15px; display: flex;
@@ -169,6 +167,7 @@ if(isset($_SESSION['keranjang'])) {
             backdrop-filter: blur(5px); z-index: 2; border: 1px solid rgba(255,255,255,0.2);
         }
 
+        /* --- PRODUK --- */
         .product-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; }
         .product-card {
             background: white; border-radius: 18px; padding: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.03);
@@ -179,10 +178,22 @@ if(isset($_SESSION['keranjang'])) {
             overflow: hidden; display: flex; align-items: center; justify-content: center;
         }
         .product-img-box img { width: 100%; height: 100%; object-fit: cover; }
+        
+        /* === PERBAIKAN CSS YANG SERING ERROR DI EDITOR === */
         .product-name {
-            font-size: 13px; font-weight: 600; color: #333; margin-bottom: 4px; line-height: 1.3;
-            display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; height: 34px; 
+            font-size: 13px; 
+            font-weight: 600; 
+            color: #333; 
+            margin-bottom: 4px; 
+            line-height: 1.3;
+            /* Properti Truncate (Abaikan warning merah di VSCode) */
+            display: -webkit-box; 
+            -webkit-line-clamp: 2; 
+            -webkit-box-orient: vertical; 
+            overflow: hidden; 
+            height: 34px; 
         }
+
         .product-meta { display: flex; justify-content: space-between; align-items: center; margin-top: 5px; }
         .product-price { font-size: 14px; font-weight: 700; color: #00A859; }
         
@@ -196,6 +207,7 @@ if(isset($_SESSION['keranjang'])) {
         .stock-label { font-size: 10px; color: #999; margin-bottom: 2px; }
         .empty-state { text-align: center; color: #999; padding: 20px; font-size: 12px; width: 100%; grid-column: span 2; }
         
+        /* --- BOTTOM NAV --- */
         .bottom-navbar {
             position: fixed; bottom: 0; left: 0; width: 100%; background-color: white; height: 75px;
             display: flex; justify-content: space-between; padding: 0 20px;
