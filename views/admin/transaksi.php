@@ -136,7 +136,7 @@ foreach($data_transaksi as $t) {
         </div>
 
         <div class="absolute bottom-6 left-0 right-0 px-6 z-30">
-            <a href="tambah_transaksi.php" class="bg-gray-900 text-white w-full py-4 rounded-2xl shadow-xl flex items-center justify-center gap-3 hover:bg-gray-800 transition active:scale-95 group">
+            <a href="../../process/admin/tambah_transaksi.php" class="bg-gray-900 text-white w-full py-4 rounded-2xl shadow-xl flex items-center justify-center gap-3 hover:bg-gray-800 transition active:scale-95 group">
                 <div class="bg-white/20 p-1 rounded-full">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
