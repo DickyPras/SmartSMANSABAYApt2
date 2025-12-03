@@ -1,7 +1,7 @@
 <?php
 // Tentukan path relatif yang benar dari lokasi file yang meng-include
 // File ini di-include dari views/user/auth/, jadi perlu naik 3 level
-$imagePath = '../../../public/images/'; 
+$imagePath = '../../../public/images/ '; 
 
 // Atau gunakan path absolut dari root web
 // $imagePath = '/SmartSMANSABAYApt2/public/images/';
