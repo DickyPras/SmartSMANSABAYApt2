@@ -1,15 +1,29 @@
 <?php
-// --- [1] DATA DUMMY LAPORAN (Simulasi Database) ---
-// Ceritanya ini data penjualan 7 hari terakhir data sementara 
-$data_harian = [
-    ["tanggal" => "20 Okt", "pendapatan" => 150000, "transaksi" => 15],
-    ["tanggal" => "21 Okt", "pendapatan" => 230000, "transaksi" => 20],
-    ["tanggal" => "22 Okt", "pendapatan" => 180000, "transaksi" => 18],
-    ["tanggal" => "23 Okt", "pendapatan" => 350000, "transaksi" => 35],
-    ["tanggal" => "24 Okt", "pendapatan" => 210000, "transaksi" => 22],
-    ["tanggal" => "25 Okt", "pendapatan" => 420000, "transaksi" => 40],
-    ["tanggal" => "26 Okt", "pendapatan" => 310000, "transaksi" => 28],
-];
+require_once '../../config/koneksi.php';
+
+// Ambil data omzet 7 hari terakhir dari tabel transaksi
+$data_harian = [];
+
+$sql = "SELECT DATE(tanggal) AS tgl, 
+               SUM(total_harga) AS pendapatan, 
+               COUNT(*) AS transaksi
+        FROM transaksi
+        WHERE status IN ('dibayar','selesai')
+        GROUP BY DATE(tanggal)
+        ORDER BY DATE(tanggal) DESC
+        LIMIT 7";
+
+if ($result = mysqli_query($koneksi, $sql)) {
+    while ($row = mysqli_fetch_assoc($result)) {
+        $tanggalLabel = date('d M', strtotime($row['tgl'])); // contoh: 20 Oct
+        $data_harian[] = [
+            'tanggal' => $tanggalLabel,
+            'pendapatan' => (int) $row['pendapatan'],
+            'transaksi' => (int) $row['transaksi'],
+        ];
+    }
+    mysqli_free_result($result);
+}
 
 // Hitung Total untuk Card Ringkasan
 $total_omzet = 0;
@@ -25,7 +39,6 @@ foreach($data_harian as $row) {
     $total_transaksi += $row['transaksi'];
     $total_laba += ($row['pendapatan'] * 0.2); // Simulasi laba 20%
     
-    // Masukkan ke array chart
     $chart_labels[] = $row['tanggal'];
     $chart_data[] = $row['pendapatan'];
 }

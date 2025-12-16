@@ -1,39 +1,57 @@
 <?php
-// --- [1] DATA DUMMY TRANSAKSI ---
-// Dalam aplikasi nyata, ini diambil dari tabel `transaksi` JOIN `anggota`
-$data_transaksi = [
-    [
-        "no_invoice" => "TRX-20231025-001",
-        "anggota" => "Ahmad Dhani",
-        "tanggal" => "2025-10-25 08:30:00",
-        "total" => 15000,
-        "items" => 3, // Jumlah barang yang dibeli
-        "status" => "Lunas"
-    ],
-    [
-        "no_invoice" => "TRX-20231025-002",
-        "anggota" => "Maya Estianty",
-        "tanggal" => "2025-10-25 09:15:00",
-        "total" => 8500,
-        "items" => 2,
-        "status" => "Lunas"
-    ],
-    [
-        "no_invoice" => "TRX-20231025-003",
-        "anggota" => "Mulan Jameela",
-        "tanggal" => "2025-10-25 10:00:00",
-        "total" => 50000,
-        "items" => 5,
-        "status" => "Pending" // Belum bayar (misal: kasbon)
-    ],
-];
+require_once '../../config/koneksi.php';
 
-// Hitung Omzet Hari Ini (Simulasi)
-$omzet_hari_ini = 0;
-foreach($data_transaksi as $t) {
-    if($t['status'] == 'Lunas') {
-        $omzet_hari_ini += $t['total'];
+// Ambil transaksi terbaru dari database
+$data_transaksi = [];
+
+// Hitung omzet hari ini dari transaksi yang sudah dibayar / selesai
+$today = date('Y-m-d');
+$sqlOmzet = "SELECT SUM(total_harga) AS omzet
+             FROM transaksi
+             WHERE DATE(tanggal) = '$today'
+               AND status IN ('dibayar','selesai')";
+$resOmzet = mysqli_query($koneksi, $sqlOmzet);
+$rowOmzet = $resOmzet ? mysqli_fetch_assoc($resOmzet) : ['omzet' => 0];
+$omzet_hari_ini = (int) ($rowOmzet['omzet'] ?? 0);
+
+// Ambil list transaksi + jumlah item
+$sql = "SELECT t.id_transaksi, t.tanggal, t.total_harga, t.status, u.nama
+        FROM transaksi t
+        JOIN users u ON t.id_user = u.id_user
+        ORDER BY t.tanggal DESC
+        LIMIT 20";
+
+if ($result = mysqli_query($koneksi, $sql)) {
+    while ($row = mysqli_fetch_assoc($result)) {
+        // hitung jumlah item per transaksi
+        $items = 0;
+        $sqlItems = "SELECT SUM(jumlah) AS jml 
+                     FROM detail_transaksi 
+                     WHERE id_transaksi = " . (int) $row['id_transaksi'];
+        if ($resItems = mysqli_query($koneksi, $sqlItems)) {
+            $rowItems = mysqli_fetch_assoc($resItems);
+            $items = (int) ($rowItems['jml'] ?? 0);
+            mysqli_free_result($resItems);
+        }
+
+        // mapping status DB ke label tampilan
+        $statusLabel = 'Pending';
+        if (in_array($row['status'], ['dibayar', 'selesai'])) {
+            $statusLabel = 'Lunas';
+        } elseif ($row['status'] === 'batal') {
+            $statusLabel = 'Batal';
+        }
+
+        $data_transaksi[] = [
+            'no_invoice' => 'TRX-' . str_pad($row['id_transaksi'], 6, '0', STR_PAD_LEFT),
+            'anggota' => $row['nama'],
+            'tanggal' => $row['tanggal'],
+            'total' => (int) $row['total_harga'],
+            'items' => $items,
+            'status' => $statusLabel,
+        ];
     }
+    mysqli_free_result($result);
 }
 ?>
 

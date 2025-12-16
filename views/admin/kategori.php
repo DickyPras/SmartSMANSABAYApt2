@@ -1,44 +1,39 @@
 <?php
-// --- [1] DATA DUMMY KATEGORI ---
-// Nanti diganti query: SELECT * FROM kategori ...
-// field 'jumlah_produk' biasanya didapat dari query COUNT() relasi ke tabel produk
-$data_kategori = [
-    [
-        "id" => 1,
-        "nama" => "Makanan Ringan",
-        "jumlah_produk" => 45,
-        "icon" => "🍔", 
-        "warna" => "bg-orange-100 text-orange-600"
-    ],
-    [
-        "id" => 2,
-        "nama" => "Minuman Dingin",
-        "jumlah_produk" => 23,
-        "icon" => "🥤",
-        "warna" => "bg-blue-100 text-blue-600"
-    ],
-    [
-        "id" => 3,
-        "nama" => "Alat Tulis (ATK)",
-        "jumlah_produk" => 150,
-        "icon" => "✏️",
-        "warna" => "bg-purple-100 text-purple-600"
-    ],
-    [
-        "id" => 4,
-        "nama" => "Seragam & Atribut",
-        "jumlah_produk" => 12,
-        "icon" => "👕",
-        "warna" => "bg-pink-100 text-pink-600"
-    ],
-    [
-        "id" => 5,
-        "nama" => "Jasa Print/Fotokopi",
-        "jumlah_produk" => 5,
-        "icon" => "🖨️",
-        "warna" => "bg-gray-100 text-gray-600"
-    ],
+require_once '../../config/koneksi.php';
+
+// Ambil kategori + jumlah produk dari database
+$data_kategori = [];
+
+$sql = "SELECT k.id_kategori, k.nama_kategori, COUNT(b.id_barang) AS jumlah_produk
+        FROM kategori_barang k
+        LEFT JOIN barang b ON b.id_kategori = k.id_kategori
+        GROUP BY k.id_kategori, k.nama_kategori
+        ORDER BY k.nama_kategori ASC";
+
+$warna_classes = [
+    'bg-orange-100 text-orange-600',
+    'bg-blue-100 text-blue-600',
+    'bg-purple-100 text-purple-600',
+    'bg-pink-100 text-pink-600',
+    'bg-gray-100 text-gray-600',
 ];
+
+$icons = ['🍔', '🥤', '✏️', '👕', '🖨️'];
+$i = 0;
+
+if ($result = mysqli_query($koneksi, $sql)) {
+    while ($row = mysqli_fetch_assoc($result)) {
+        $data_kategori[] = [
+            'id' => $row['id_kategori'],
+            'nama' => $row['nama_kategori'],
+            'jumlah_produk' => (int) $row['jumlah_produk'],
+            'icon' => $icons[$i % count($icons)],
+            'warna' => $warna_classes[$i % count($warna_classes)],
+        ];
+        $i++;
+    }
+    mysqli_free_result($result);
+}
 ?>
 
 <!DOCTYPE html>

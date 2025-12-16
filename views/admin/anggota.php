@@ -1,28 +1,26 @@
 <?php
-// query: mysqli_query($koneksi, "SELECT * FROM anggota");
-$data_anggota = [
-    [
-        "id" => 1,
-        "nama" => "Ahmad Dhani",
-        "nis" => "12345678",
-        "kelas" => "XII RPL 1",
-        "status" => "Aktif"
-    ],
-    [
-        "id" => 2,
-        "nama" => "Maya Estianty",
-        "nis" => "87654321",
-        "kelas" => "XI TKJ 2",
-        "status" => "Aktif"
-    ],
-    [
-        "id" => 3,
-        "nama" => "Mulan Jameela",
-        "nis" => "11223344",
-        "kelas" => "X AKL 1",
-        "status" => "Non-Aktif"
-    ],
-];
+require_once '../../config/koneksi.php';
+
+// Ambil data anggota dari tabel users (role siswa)
+$data_anggota = [];
+$sql = "SELECT id_user, nis, nama, kelas, role 
+        FROM users 
+        WHERE role = 'siswa'
+        ORDER BY nama ASC";
+
+if ($result = mysqli_query($koneksi, $sql)) {
+    while ($row = mysqli_fetch_assoc($result)) {
+        $data_anggota[] = [
+            'id' => $row['id_user'],
+            'nama' => $row['nama'],
+            'nis' => $row['nis'],
+            'kelas' => $row['kelas'],
+            // sementara semua dianggap aktif, bisa tambahkan kolom status sendiri jika dibutuhkan
+            'status' => 'Aktif',
+        ];
+    }
+    mysqli_free_result($result);
+}
 ?>
 
 <!DOCTYPE html>

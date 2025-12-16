@@ -1,9 +1,18 @@
 <?php
+require_once '../../config/koneksi.php';
+
 // --- [1] BAGIAN BACKEND (PHP NATIVE) ---
-// Di sini kita simpan data dummy (ceritanya ambil dari database)
-$adminName = "Raden Fahri";
+// Data admin bisa diambil dari session jika sudah ada sistem login
+$adminName = "Admin E-Smart";
 $jabatan = "ADMINISTRATOR";
-$totalPendapatan = "Rp.7,783.00";
+
+// Total pendapatan dari seluruh transaksi yang sudah dibayar / selesai
+$sqlTotal = "SELECT SUM(total_harga) AS total 
+             FROM transaksi 
+             WHERE status IN ('dibayar','selesai')";
+$resTotal = mysqli_query($koneksi, $sqlTotal);
+$rowTotal = $resTotal ? mysqli_fetch_assoc($resTotal) : ['total' => 0];
+$totalPendapatan = "Rp." . number_format((int) ($rowTotal['total'] ?? 0), 0, ',', '.');
 
 // Array Menu agar kodingan HTML lebih rapi (Looping)
 $menus = [

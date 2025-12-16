@@ -1,39 +1,26 @@
 <?php
-// Nanti diganti query: SELECT * FROM produk JOIN kategori ...
-$data_produk = [
-    [
-        "id" => 1,
-        "nama" => "Teh Pucuk Harum 350ml",
-        "kategori" => "Minuman",
-        "harga" => 4000,
-        "stok" => 24,
-        "gambar" => "https://assets.klikindomaret.com/products/20042075/20042075_1.jpg" 
-    ],
-    [
-        "id" => 2,
-        "nama" => "Roti Oksis Coklat",
-        "kategori" => "Makanan",
-        "harga" => 2500,
-        "stok" => 5, // Stok Menipis
-        "gambar" => "https://images.tokopedia.net/img/cache/700/VqbcmM/2022/6/15/8d10350d-6e83-490b-ba65-8cc080214c77.jpg"
-    ],
-    [
-        "id" => 3,
-        "nama" => "Pulpen Standard AE7",
-        "kategori" => "Alat Tulis",
-        "harga" => 3000,
-        "stok" => 0, // Habis
-        "gambar" => "https://down-id.img.susercontent.com/file/id-11134207-7r98o-lsmg3e6z63n2eb"
-    ],
-    [
-        "id" => 4,
-        "nama" => "Buku Tulis Sidu 38",
-        "kategori" => "Alat Tulis",
-        "harga" => 5000,
-        "stok" => 50,
-        "gambar" => "https://static.bmdstatic.com/pk/product/medium/5c6b6d5186088.jpg"
-    ]
-];
+require_once '../../config/koneksi.php';
+
+// Ambil data produk dari tabel barang join kategori_barang
+$data_produk = [];
+$sql = "SELECT b.id_barang, b.nama_barang, b.harga, b.stok, b.gambar, k.nama_kategori
+        FROM barang b
+        LEFT JOIN kategori_barang k ON b.id_kategori = k.id_kategori
+        ORDER BY b.nama_barang ASC";
+
+if ($result = mysqli_query($koneksi, $sql)) {
+    while ($row = mysqli_fetch_assoc($result)) {
+        $data_produk[] = [
+            'id' => $row['id_barang'],
+            'nama' => $row['nama_barang'],
+            'kategori' => $row['nama_kategori'] ?: '-',
+            'harga' => (int) $row['harga'],
+            'stok' => (int) $row['stok'],
+            'gambar' => $row['gambar'] ?: 'https://via.placeholder.com/150x150?text=Produk',
+        ];
+    }
+    mysqli_free_result($result);
+}
 ?>
 
 <!DOCTYPE html>
