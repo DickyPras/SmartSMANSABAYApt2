@@ -1,13 +1,63 @@
 <?php
 require_once '../../config/koneksi.php';
 
-// Ambil data produk dari tabel barang join kategori_barang
-$data_produk = [];
-$sql = "SELECT b.id_barang, b.nama_barang, b.harga, b.stok, b.gambar, k.nama_kategori
-        FROM barang b
-        LEFT JOIN kategori_barang k ON b.id_kategori = k.id_kategori
-        ORDER BY b.nama_barang ASC";
+// Ambil filter kategori & search dari query string
+$filter = isset($_GET['filter']) ? strtolower($_GET['filter']) : 'all';
+$search = isset($_GET['q']) ? trim($_GET['q']) : '';
 
+// Bangun query dasar produk
+$sqlBase = "SELECT b.id_barang, b.nama_barang, b.harga, b.stok, b.gambar, k.nama_kategori
+            FROM barang b
+            LEFT JOIN kategori_barang k ON b.id_kategori = k.id_kategori";
+
+// Mapping kategori ke grup filter berdasarkan nama_kategori di database
+$kategoriMinuman = [
+    'Air Mineral',
+    'Susu & Yogurt',
+    'Teh Kemasan',
+    'Kopi Siap Minum',
+    'Minuman Buah & Isotonik',
+];
+
+$kategoriMakanan = [
+    'Mie Instan',
+    'Keripik & Snack Gurih',
+    'Wafer & Cokelat',
+    'Biskuit & Sponge',
+    'Permen & Jelly',
+    'Es Krim Stick & Cone',
+    'Es Krim Cup & Mochi',
+];
+
+// Kumpulkan kondisi WHERE
+$conditions = [];
+
+if ($filter === 'makanan') {
+    $in = "'" . implode("','", array_map('addslashes', $kategoriMakanan)) . "'";
+    $conditions[] = "k.nama_kategori IN ($in)";
+} elseif ($filter === 'minuman') {
+    $in = "'" . implode("','", array_map('addslashes', $kategoriMinuman)) . "'";
+    $conditions[] = "k.nama_kategori IN ($in)";
+} elseif ($filter === 'alat-tulis') {
+    // Jika nanti ada kategori khusus alat tulis di tabel kategori_barang, sesuaikan di sini
+    $conditions[] = "k.nama_kategori LIKE '%Tulis%'";
+}
+
+// Tambahkan kondisi search jika ada
+if ($search !== '') {
+    $keyword = mysqli_real_escape_string($koneksi, $search);
+    $conditions[] = "(b.nama_barang LIKE '%$keyword%' OR k.nama_kategori LIKE '%$keyword%')";
+}
+
+$where = '';
+if (count($conditions) > 0) {
+    $where = ' WHERE ' . implode(' AND ', $conditions);
+}
+
+$sql = $sqlBase . $where . " ORDER BY b.nama_barang ASC";
+
+// Ambil data produk dari database
+$data_produk = [];
 if ($result = mysqli_query($koneksi, $sql)) {
     while ($row = mysqli_fetch_assoc($result)) {
         $data_produk[] = [
@@ -21,6 +71,9 @@ if ($result = mysqli_query($koneksi, $sql)) {
     }
     mysqli_free_result($result);
 }
+
+// Helper untuk mempertahankan parameter search di URL filter
+$searchQuery = $search !== '' ? 'q=' . urlencode($search) : '';
 ?>
 
 <!DOCTYPE html>
@@ -82,18 +135,42 @@ if ($result = mysqli_query($koneksi, $sql)) {
                 </a>
             </div>
 
-            <div class="relative">
+            <form method="get" class="relative">
+                <?php if ($filter !== 'all'): ?>
+                    <input type="hidden" name="filter" value="<?= htmlspecialchars($filter) ?>">
+                <?php endif; ?>
                 <span class="absolute inset-y-0 left-0 flex items-center pl-3">
                     <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                 </span>
-                <input type="text" placeholder="Cari produk..." class="w-full py-3 pl-10 pr-4 rounded-2xl border-none focus:ring-2 focus:ring-yellow-600 shadow-sm text-sm">
-            </div>
+                <input
+                    type="text"
+                    name="q"
+                    value="<?= htmlspecialchars($search) ?>"
+                    placeholder="Cari nama / kategori produk..."
+                    class="w-full py-3 pl-10 pr-4 rounded-2xl border-none focus:ring-2 focus:ring-yellow-600 shadow-sm text-sm"
+                >
+            </form>
 
             <div class="flex gap-2 mt-4 overflow-x-auto pb-2 no-scrollbar">
-                <button class="bg-gray-900 text-white px-4 py-1.5 rounded-full text-xs font-medium whitespace-nowrap">Semua</button>
-                <button class="bg-white/40 hover:bg-white text-gray-800 px-4 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition">Makanan</button>
-                <button class="bg-white/40 hover:bg-white text-gray-800 px-4 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition">Minuman</button>
-                <button class="bg-white/40 hover:bg-white text-gray-800 px-4 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition">Alat Tulis</button>
+                <?php
+                $baseBtn = 'px-4 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition';
+                ?>
+                <a href="produk.php<?= $searchQuery ? ('?' . $searchQuery) : '' ?>"
+                   class="<?= $baseBtn . ' ' . ($filter === 'all' ? 'bg-gray-900 text-white' : 'bg-white/40 hover:bg-white text-gray-800') ?>">
+                    Semua
+                </a>
+                <a href="produk.php?<?= $searchQuery ? ($searchQuery . '&') : '' ?>filter=makanan"
+                   class="<?= $baseBtn . ' ' . ($filter === 'makanan' ? 'bg-gray-900 text-white' : 'bg-white/40 hover:bg-white text-gray-800') ?>">
+                    Makanan
+                </a>
+                <a href="produk.php?<?= $searchQuery ? ($searchQuery . '&') : '' ?>filter=minuman"
+                   class="<?= $baseBtn . ' ' . ($filter === 'minuman' ? 'bg-gray-900 text-white' : 'bg-white/40 hover:bg-white text-gray-800') ?>">
+                    Minuman
+                </a>
+                <a href="produk.php?<?= $searchQuery ? ($searchQuery . '&') : '' ?>filter=alat-tulis"
+                   class="<?= $baseBtn . ' ' . ($filter === 'alat-tulis' ? 'bg-gray-900 text-white' : 'bg-white/40 hover:bg-white text-gray-800') ?>">
+                    Alat Tulis
+                </a>
             </div>
         </div>
 
