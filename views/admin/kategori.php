@@ -10,27 +10,13 @@ $sql = "SELECT k.id_kategori, k.nama_kategori, COUNT(b.id_barang) AS jumlah_prod
         GROUP BY k.id_kategori, k.nama_kategori
         ORDER BY k.nama_kategori ASC";
 
-$warna_classes = [
-    'bg-orange-100 text-orange-600',
-    'bg-blue-100 text-blue-600',
-    'bg-purple-100 text-purple-600',
-    'bg-pink-100 text-pink-600',
-    'bg-gray-100 text-gray-600',
-];
-
-$icons = ['🍔', '🥤', '✏️', '👕', '🖨️'];
-$i = 0;
-
 if ($result = mysqli_query($koneksi, $sql)) {
     while ($row = mysqli_fetch_assoc($result)) {
         $data_kategori[] = [
             'id' => $row['id_kategori'],
             'nama' => $row['nama_kategori'],
             'jumlah_produk' => (int) $row['jumlah_produk'],
-            'icon' => $icons[$i % count($icons)],
-            'warna' => $warna_classes[$i % count($warna_classes)],
         ];
-        $i++;
     }
     mysqli_free_result($result);
 }
@@ -106,26 +92,12 @@ if ($result = mysqli_query($koneksi, $sql)) {
             <div class="grid grid-cols-2 gap-4">
                 <?php foreach($data_kategori as $row): ?>
                 
-                <div class="bg-white p-4 rounded-3xl shadow-sm border border-gray-100 flex flex-col justify-between hover:shadow-md transition group h-40 relative overflow-hidden">
+                <div class="bg-white p-4 rounded-3xl shadow-sm border border-gray-100 flex flex-col items-center justify-center hover:shadow-md transition group h-40 relative overflow-hidden text-center">
                     
                     <div class="absolute -right-4 -top-4 w-20 h-20 bg-gray-50 rounded-full group-hover:bg-yellow-50 transition"></div>
 
-                    <div class="flex justify-between items-start z-10">
-                        <div class="w-10 h-10 rounded-full <?= $row['warna'] ?> flex items-center justify-center text-xl shadow-inner">
-                            <?= $row['icon'] ?>
-                        </div>
-                        
-                        <div class="relative">
-                            <button class="text-gray-400 hover:text-gray-600 p-1">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-                                </svg>
-                            </button>
-                            </div>
-                    </div>
-
-                    <div class="z-10 mt-2">
-                        <h3 class="font-bold text-gray-800 text-md leading-tight mb-1"><?= $row['nama'] ?></h3>
+                    <div class="z-10 flex flex-col items-center justify-center">
+                        <h3 class="font-bold text-gray-800 text-sm leading-tight mb-1"><?= $row['nama'] ?></h3>
                         <p class="text-xs text-gray-400"><?= $row['jumlah_produk'] ?> Produk</p>
                     </div>
 
