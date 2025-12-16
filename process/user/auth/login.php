@@ -113,14 +113,14 @@ $_SESSION['success'] = 'Login berhasil! Selamat datang, ' . $user['nama'];
 // Redirect berdasarkan role
 switch ($user['role']) {
     case 'admin':
-        header('Location: ../../../views/admin/dashboard.php');
+        header('Location: ../../../views/admin/dasboard.php');
         break;
     case 'petugas':
         header('Location: ../../../views/petugas/dashboard.php');
         break;
     case 'siswa':
     default:
-        header('Location: ../../../views/user/profil.php');
+        header('Location: ../../../views/user/dasboard/home.php');
         break;
 }
 exit;

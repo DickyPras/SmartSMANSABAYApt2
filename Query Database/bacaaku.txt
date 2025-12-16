@@ -1,0 +1,5 @@
+alur run query
+    database
+    Barang
+    kategori
+    stokbarang

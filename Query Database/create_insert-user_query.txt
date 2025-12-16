@@ -1,0 +1,30 @@
+INSERT INTO users (
+    nis,
+    nama,
+    email,
+    password,
+    role,
+    kelas
+) VALUES
+(
+    '230411100149',
+    'user',
+    'user@gmail.com',
+    SHA2('User123', 256),
+    'siswa',
+    'XII Mipa 2'
+),
+(
+    '1234567890',
+    'admin',
+    'admin@gmail.com',
+    SHA2('Admin123', 256),
+    'admin',
+    'XII Mipa 2'
+);
+===================================================
+Jangan jalanin dulu cuman  isi user dan passwordnya
+
+untuk ngisi usersnya harap masukin data sesuai ini
+dihalaman registernya
+===================================================

@@ -1,5 +1,7 @@
 <?php
 require_once '../../config/koneksi.php';
+require_once '../../config/debug.php';
+
 
 // Ambil filter kategori & search dari query string
 $filter = isset($_GET['filter']) ? strtolower($_GET['filter']) : 'all';
