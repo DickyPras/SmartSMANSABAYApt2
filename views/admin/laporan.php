@@ -66,12 +66,30 @@ foreach($data_harian as $row) {
             }
         }
     </script>
+    <style>
+        body {
+            overflow: hidden;
+        }
+        .navbar-wrapper {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        .navbar-header {
+            flex-shrink: 0;
+        }
+        .content-scroll {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+    </style>
 </head>
 <body class="bg-gray-100">
 
-    <div class="max-w-md mx-auto bg-bg-soft min-h-screen relative shadow-2xl overflow-hidden flex flex-col">
+    <div class="max-w-md mx-auto bg-bg-soft min-h-screen relative shadow-2xl overflow-hidden flex flex-col navbar-wrapper">
         
-        <div class="bg-primary px-6 pt-8 pb-10 rounded-b-[2.5rem] shadow-sm z-10">
+        <div class="bg-primary px-6 pt-8 pb-10 rounded-b-[2.5rem] shadow-sm navbar-header">
             <div class="flex items-center justify-between mb-4">
                 <a href="dasboard.php" class="bg-white/20 p-2 rounded-xl hover:bg-white/40 transition">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-900" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -95,7 +113,7 @@ foreach($data_harian as $row) {
             </div>
         </div>
 
-        <div class="flex-1 px-6 -mt-8 pb-10 overflow-y-auto space-y-6">
+        <div class="flex-1 px-6 -mt-8 pb-10 overflow-y-auto space-y-6 content-scroll">
             
             <div class="grid grid-cols-2 gap-3">
                 <div class="col-span-2 bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between">

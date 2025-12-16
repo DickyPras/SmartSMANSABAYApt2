@@ -44,12 +44,30 @@ if ($result = mysqli_query($koneksi, $sql)) {
             }
         }
     </script>
+    <style>
+        body {
+            overflow: hidden;
+        }
+        .navbar-wrapper {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        .navbar-header {
+            flex-shrink: 0;
+        }
+        .content-scroll {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+    </style>
 </head>
 <body class="bg-gray-100">
 
-    <div class="max-w-md mx-auto bg-bg-soft min-h-screen relative shadow-2xl overflow-hidden flex flex-col">
+    <div class="max-w-md mx-auto bg-bg-soft min-h-screen relative shadow-2xl overflow-hidden flex flex-col navbar-wrapper">
         
-        <div class="bg-primary px-6 pt-8 pb-6 rounded-b-[2rem] shadow-sm z-10 sticky top-0">
+        <div class="bg-primary px-6 pt-8 pb-6 rounded-b-[2rem] shadow-sm navbar-header">
             <div class="flex items-center justify-between mb-4">
                 <a href="dasboard.php" class="bg-white/20 p-2 rounded-xl hover:bg-white/40 transition">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-900" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -79,7 +97,7 @@ if ($result = mysqli_query($koneksi, $sql)) {
             </div>
         </div>
 
-        <div class="flex-1 px-5 pt-4 pb-20 overflow-y-auto space-y-4">
+        <div class="flex-1 px-5 pt-4 pb-20 overflow-y-auto space-y-4 content-scroll">
             
             <?php foreach($data_produk as $row): ?>
             
