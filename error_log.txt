@@ -1,0 +1,20 @@
+[17-Dec-2025 03:18:52 UTC] PHP Fatal error:  Uncaught mysqli_sql_exception: Unknown column 'last_login' in 'field list' in C:\laragon\www\Project PPL\SmartSMANSABAYApt2\process\user\auth\login.php:108
+Stack trace:
+#0 C:\laragon\www\Project PPL\SmartSMANSABAYApt2\process\user\auth\login.php(108): mysqli_query(Object(mysqli), 'UPDATE users SE...')
+#1 {main}
+  thrown in C:\laragon\www\Project PPL\SmartSMANSABAYApt2\process\user\auth\login.php on line 108
+[17-Dec-2025 03:23:20 UTC] PHP Fatal error:  Uncaught mysqli_sql_exception: Unknown column 'last_login' in 'field list' in C:\laragon\www\Project PPL\SmartSMANSABAYApt2\process\user\auth\login.php:108
+Stack trace:
+#0 C:\laragon\www\Project PPL\SmartSMANSABAYApt2\process\user\auth\login.php(108): mysqli_query(Object(mysqli), 'UPDATE users SE...')
+#1 {main}
+  thrown in C:\laragon\www\Project PPL\SmartSMANSABAYApt2\process\user\auth\login.php on line 108
+[17-Dec-2025 03:24:40 UTC] PHP Fatal error:  Uncaught mysqli_sql_exception: Unknown column 'last_login' in 'field list' in C:\laragon\www\Project PPL\SmartSMANSABAYApt2\process\user\auth\login.php:108
+Stack trace:
+#0 C:\laragon\www\Project PPL\SmartSMANSABAYApt2\process\user\auth\login.php(108): mysqli_query(Object(mysqli), 'UPDATE users SE...')
+#1 {main}
+  thrown in C:\laragon\www\Project PPL\SmartSMANSABAYApt2\process\user\auth\login.php on line 108
+[17-Dec-2025 03:24:43 UTC] PHP Fatal error:  Uncaught mysqli_sql_exception: Unknown column 'last_login' in 'field list' in C:\laragon\www\Project PPL\SmartSMANSABAYApt2\process\user\auth\login.php:108
+Stack trace:
+#0 C:\laragon\www\Project PPL\SmartSMANSABAYApt2\process\user\auth\login.php(108): mysqli_query(Object(mysqli), 'UPDATE users SE...')
+#1 {main}
+  thrown in C:\laragon\www\Project PPL\SmartSMANSABAYApt2\process\user\auth\login.php on line 108

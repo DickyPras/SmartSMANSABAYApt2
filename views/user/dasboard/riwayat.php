@@ -1,44 +1,65 @@
 <?php
 session_start();
+require_once __DIR__ . '/../../../config/koneksi.php';
 
-$riwayat_pembelian = [
-    [
-        'id_order' => 'INV-20251212-045',
-        'tanggal' => '12 Des 2025, 12:15',
-        'total' => 18000,
-        'status' => 'Selesai', 
-        'items' => [
-            ['nama' => 'Mie Goreng Jawa', 'qty' => 1],
-            ['nama' => 'Air Mineral', 'qty' => 1]
-        ]
-    ],
-    [
-        'id_order' => 'INV-20251210-008',
-        'tanggal' => '10 Des 2025, 09:30',
-        'total' => 25000,
-        'status' => 'Selesai',
-        'items' => [
-            ['nama' => 'Nasi Ayam Geprek', 'qty' => 1],
-            ['nama' => 'Es Teh Jumbo', 'qty' => 1]
-        ]
-    ],
-    [
-        'id_order' => 'INV-20251128-099',
-        'tanggal' => '28 Nov 2025, 13:00',
-        'total' => 12000,
-        'status' => 'Selesai',
-        'items' => [
-            ['nama' => 'Soto Ayam', 'qty' => 1]
-        ]
-    ]
-];
+// Cek Koneksi
+$db_conn = isset($conn) ? $conn : (isset($koneksi) ? $koneksi : null);
+if (!$db_conn) { die("Error: Koneksi database gagal."); }
 
-// Hitung badge keranjang untuk navbar
-$total_keranjang = 0;
-if(isset($_SESSION['keranjang'])) {
-    foreach($_SESSION['keranjang'] as $item) {
-        $total_keranjang += $item['qty'];
+// Ambil ID User (Default 1 jika belum login)
+$id_user = isset($_SESSION['user_id']) ? $_SESSION['user_id'] : 1;
+
+// --- 1. AMBIL DATA RIWAYAT (HANYA STATUS 'SELESAI') ---
+$sql = "SELECT 
+            t.id_transaksi, 
+            t.kode_transaksi,
+            t.tanggal, 
+            t.total_harga, 
+            b.nama_barang,
+            d.jumlah
+        FROM transaksi t
+        JOIN detail_transaksi d ON t.id_transaksi = d.id_transaksi
+        JOIN barang b ON d.id_barang = b.id_barang
+        WHERE t.id_user = ? AND t.status = 'selesai' 
+        ORDER BY t.tanggal DESC";
+
+$stmt = $db_conn->prepare($sql);
+$stmt->bind_param("i", $id_user);
+$stmt->execute();
+$result = $stmt->get_result();
+
+// Grouping Data
+$riwayat_pembelian = [];
+while ($row = $result->fetch_assoc()) {
+    $id = $row['id_transaksi'];
+    
+    // Gunakan Kode Unik jika ada, jika tidak pakai ID biasa
+    $kode_tampil = !empty($row['kode_transaksi']) ? $row['kode_transaksi'] : 'INV-'.date('Ymd', strtotime($row['tanggal'])).'-'.str_pad($id, 3, '0', STR_PAD_LEFT);
+
+    if (!isset($riwayat_pembelian[$id])) {
+        $riwayat_pembelian[$id] = [
+            'id_order' => $kode_tampil,
+            'tanggal'  => date('d M Y, H:i', strtotime($row['tanggal'])),
+            'total'    => $row['total_harga'],
+            'status'   => 'Selesai', 
+            'items'    => []
+        ];
     }
+    // Masukkan item ke list
+    $riwayat_pembelian[$id]['items'][] = [
+        'nama' => $row['nama_barang'], 
+        'qty' => $row['jumlah']
+    ];
+}
+
+// --- 2. HITUNG BADGE KERANJANG (DARI DATABASE AGAR AKURAT) ---
+$total_keranjang = 0;
+$stmt_cart = $db_conn->prepare("SELECT SUM(jumlah) as total FROM keranjang WHERE id_user = ?");
+$stmt_cart->bind_param("i", $id_user);
+$stmt_cart->execute();
+$res_cart = $stmt_cart->get_result();
+if($row_cart = $res_cart->fetch_assoc()) {
+    $total_keranjang = $row_cart['total'] ? $row_cart['total'] : 0;
 }
 ?>
 
