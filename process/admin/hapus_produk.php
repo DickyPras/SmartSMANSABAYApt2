@@ -1,46 +1,56 @@
 <?php
-$data_produk = [
-    [
-        "id" => 1,
-        "nama" => "Teh Pucuk Harum 350ml",
-        "kategori" => "Minuman",
-        "harga" => 4000,
-        "stok" => 24,
-        "gambar" => "https://assets.klikindomaret.com/products/20042075/20042075_1.jpg" 
-    ],
-    [
-        "id" => 2,
-        "nama" => "Roti Oksis Coklat",
-        "kategori" => "Makanan",
-        "harga" => 2500,
-        "stok" => 5,
-        "gambar" => "https://images.tokopedia.net/img/cache/700/VqbcmM/2022/6/15/8d10350d-6e83-490b-ba65-8cc080214c77.jpg"
-    ],
-    [
-        "id" => 3,
-        "nama" => "Pulpen Standard AE7",
-        "kategori" => "Alat Tulis",
-        "harga" => 3000,
-        "stok" => 0,
-        "gambar" => "https://down-id.img.susercontent.com/file/id-11134207-7r98o-lsmg3e6z63n2eb"
-    ],
-    [
-        "id" => 4,
-        "nama" => "Buku Tulis Sidu 38",
-        "kategori" => "Alat Tulis",
-        "harga" => 5000,
-        "stok" => 50,
-        "gambar" => "https://static.bmdstatic.com/pk/product/medium/5c6b6d5186088.jpg"
-    ]
-];
+require_once '../../config/koneksi.php';
 
-$id = (int) ($_GET['id'] ?? 1);
-$selected = array_values(array_filter($data_produk, fn($row) => $row['id'] === $id))[0] ?? $data_produk[0];
+$id = (int) ($_GET['id'] ?? 0);
+$error = '';
 
-$delete_success = false;
+if ($id <= 0) {
+    header('Location: ../../views/admin/produk.php');
+    exit;
+}
+
+// 1. Ambil data produk dengan JOIN ke kategori untuk preview yang informatif
+$sql_select = "SELECT b.*, k.nama_kategori 
+               FROM barang b 
+               JOIN kategori_barang k ON b.id_kategori = k.id_kategori 
+               WHERE b.id_barang = $id LIMIT 1";
+$res = mysqli_query($koneksi, $sql_select);
+$selected = ($res && mysqli_num_rows($res)) ? mysqli_fetch_assoc($res) : null;
+
+// Jika produk tidak ditemukan di database
+if (!$selected) {
+    header('Location: ../../views/admin/produk.php');
+    exit;
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $delete_success = true;
+    // Mulai Transaksi SQL
+    mysqli_begin_transaction($koneksi);
+
+    try {
+        // 2. Hapus dulu riwayat stok di tabel stok_barang (karena ada Foreign Key)
+        $delete_stok = "DELETE FROM stok_barang WHERE id_barang = $id";
+        mysqli_query($koneksi, $delete_stok);
+
+        // 3. Hapus produk dari tabel barang
+        $delete_barang = "DELETE FROM barang WHERE id_barang = $id";
+        
+        if (mysqli_query($koneksi, $delete_barang)) {
+            mysqli_commit($koneksi);
+            header('Location: ../../views/admin/produk.php?deleted=1');
+            exit;
+        } else {
+            throw new Exception(mysqli_error($koneksi));
+        }
+    } catch (Exception $e) {
+        mysqli_rollback($koneksi);
+        // Cek jika error disebabkan karena produk sudah pernah terjual (ada di detail_transaksi)
+        if (strpos($e->getMessage(), 'foreign key constraint') !== false) {
+            $error = 'Produk tidak bisa dihapus karena sudah memiliki riwayat transaksi/penjualan.';
+        } else {
+            $error = 'Gagal menghapus produk: ' . $e->getMessage();
+        }
+    }
 }
 ?>
 
@@ -57,10 +67,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             theme: {
                 extend: {
                     fontFamily: { sans: ['Poppins', 'sans-serif'] },
-                    colors: {
-                        'primary': '#FACC15',
-                        'bg-soft': '#F0FDF4',
-                    }
+                    colors: { 'primary': '#FACC15', 'bg-soft': '#F0FDF4' }
                 }
             }
         }
@@ -78,53 +85,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <h1 class="text-xl font-bold text-gray-900">Hapus Produk</h1>
                 <div class="w-10"></div>
             </div>
-            <p class="mt-2 text-sm text-gray-700">Aksi masih dummy, belum menyentuh database.</p>
+            <p class="mt-2 text-sm text-gray-700">Penghapusan data bersifat permanen.</p>
         </div>
 
         <div class="flex-1 px-6 pt-6 pb-12 space-y-6 overflow-y-auto">
-            <?php if ($delete_success): ?>
-            <div class="bg-red-100 text-red-700 px-4 py-3 rounded-2xl shadow-sm">
-                <p class="font-semibold">Data dummy berhasil dihapus!</p>
-                <p class="text-sm mt-1">ID: <?= $selected['id'] ?></p>
-                <a href="../../views/admin/produk.php" class="inline-flex items-center gap-2 text-sm text-red-800 underline mt-2">Kembali ke daftar produk</a>
-            </div>
-            <?php else: ?>
-            <div class="bg-white p-5 rounded-3xl shadow-sm border border-red-200">
-                <div class="flex items-center gap-4">
-                    <div class="w-14 h-14 rounded-2xl bg-red-50 flex items-center justify-center text-red-500">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            <?php if ($error): ?>
+                <div class="bg-red-100 text-red-700 px-4 py-3 rounded-2xl text-sm font-medium">
+                    ⚠️ <?= $error ?>
+                </div>
+            <?php endif; ?>
+
+            <div class="bg-white p-6 rounded-3xl shadow-sm border border-red-100">
+                <div class="flex flex-col items-center text-center mb-6">
+                    <div class="w-20 h-20 rounded-full bg-red-50 flex items-center justify-center text-red-500 mb-4">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                         </svg>
                     </div>
+                    <h2 class="text-lg font-bold text-gray-800">Hapus Produk Ini?</h2>
+                </div>
+
+                <div class="flex items-center gap-4 bg-gray-50 p-4 rounded-2xl mb-6">
+                    <div class="w-16 h-16 bg-white rounded-xl overflow-hidden border border-gray-100 flex-shrink-0">
+                        <?php if (!empty($selected['gambar'])): ?>
+                            <img src="<?= htmlspecialchars($selected['gambar']) ?>" class="w-full h-full object-cover">
+                        <?php else: ?>
+                            <div class="w-full h-full flex items-center justify-center bg-gray-200 text-gray-400 text-xs">No Img</div>
+                        <?php endif; ?>
+                    </div>
                     <div>
-                        <p class="text-gray-800 font-semibold">Konfirmasi hapus?</p>
-                        <p class="text-sm text-gray-500">Tindakan ini tidak dapat dibatalkan (dummy).</p>
+                        <p class="font-bold text-gray-800 leading-tight"><?= htmlspecialchars($selected['nama_barang']) ?></p>
+                        <p class="text-xs text-gray-500"><?= htmlspecialchars($selected['nama_kategori']) ?> • Rp <?= number_format($selected['harga'], 0, ',', '.') ?></p>
+                        <p class="text-xs font-medium text-red-600 mt-1">Stok: <?= $selected['stok'] ?> <?= $selected['satuan'] ?></p>
                     </div>
                 </div>
 
-                <?php if (!empty($selected['gambar'])): ?>
-                <div class="mt-4 w-24 h-24 bg-gray-100 rounded-xl overflow-hidden">
-                    <img src="<?= htmlspecialchars($selected['gambar']) ?>" alt="<?= htmlspecialchars($selected['nama']) ?>" class="w-full h-full object-cover">
-                </div>
-                <?php endif; ?>
-
-                <div class="mt-5 space-y-1">
-                    <p class="text-sm text-gray-500">Nama Produk</p>
-                    <p class="font-semibold text-gray-800"><?= htmlspecialchars($selected['nama']) ?></p>
-                    <p class="text-sm text-gray-500 mt-3">Kategori & Harga</p>
-                    <p class="font-semibold text-gray-800"><?= htmlspecialchars($selected['kategori']) ?> • Rp <?= number_format($selected['harga'], 0, ',', '.') ?></p>
-                    <p class="text-sm text-gray-500 mt-3">Stok</p>
-                    <p class="font-semibold text-gray-800"><?= htmlspecialchars($selected['stok']) ?> unit</p>
-                </div>
-
-                <form method="POST" class="mt-6 space-y-3">
-                    <button type="submit" class="w-full bg-red-600 text-white py-3 rounded-2xl shadow-lg hover:bg-red-500 transition font-semibold">Hapus (Dummy)</button>
-                    <a href="../../views/admin/produk.php" class="w-full inline-flex justify-center py-3 rounded-2xl border border-gray-200 text-gray-700 hover:bg-gray-50 transition font-semibold">Batal</a>
+                <form method="POST" class="space-y-3">
+                    <button type="submit" class="w-full bg-red-600 text-white py-4 rounded-2xl shadow-lg hover:bg-red-700 transition font-bold">
+                        Ya, Hapus Produk
+                    </button>
+                    <a href="../../views/admin/produk.php" class="w-full inline-flex justify-center py-4 rounded-2xl border border-gray-200 text-gray-700 hover:bg-gray-50 transition font-bold text-sm">
+                        Batalkan
+                    </a>
                 </form>
             </div>
-            <?php endif; ?>
         </div>
     </div>
 </body>
 </html>
-

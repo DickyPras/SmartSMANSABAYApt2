@@ -1,43 +1,52 @@
 <?php
-$data_transaksi = [
-    [
-        "no_invoice" => "TRX-20231025-001",
-        "anggota" => "Ahmad Dhani",
-        "tanggal" => "2025-10-25 08:30:00",
-        "total" => 15000,
-        "items" => 3,
-        "status" => "Lunas"
-    ],
-    [
-        "no_invoice" => "TRX-20231025-002",
-        "anggota" => "Maya Estianty",
-        "tanggal" => "2025-10-25 09:15:00",
-        "total" => 8500,
-        "items" => 2,
-        "status" => "Lunas"
-    ],
-    [
-        "no_invoice" => "TRX-20231025-003",
-        "anggota" => "Mulan Jameela",
-        "tanggal" => "2025-10-25 10:00:00",
-        "total" => 50000,
-        "items" => 5,
-        "status" => "Pending"
-    ],
-];
+require_once '../../config/koneksi.php';
 
-$invoice = $_GET['invoice'] ?? $data_transaksi[0]['no_invoice'];
-$selected = array_values(array_filter($data_transaksi, fn($row) => $row['no_invoice'] === $invoice))[0] ?? $data_transaksi[0];
+// 1. Ambil ID Transaksi dari parameter URL
+$id = (int) ($_GET['id'] ?? 0);
+$selected = null;
+$error = '';
 
-$update_success = false;
+if ($id > 0) {
+    // Ambil data transaksi dan gabungkan dengan nama user (siswa)
+    $sql_get = "SELECT t.*, u.nama as nama_siswa 
+                FROM transaksi t 
+                JOIN users u ON t.id_user = u.id_user 
+                WHERE t.id_transaksi = $id LIMIT 1";
+    $res = mysqli_query($koneksi, $sql_get);
+    if ($res && mysqli_num_rows($res) > 0) {
+        $selected = mysqli_fetch_assoc($res);
+    }
+}
 
+// Redirect jika ID tidak ditemukan di database
+if (!$selected) {
+    header('Location: ../../views/admin/transaksi.php');
+    exit;
+}
+
+// 2. Proses Update Data
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $selected['anggota'] = $_POST['anggota'] ?? $selected['anggota'];
-    $selected['tanggal'] = $_POST['tanggal'] ?? date('Y-m-d H:i:s');
-    $selected['total'] = (int) ($_POST['total'] ?? $selected['total']);
-    $selected['items'] = (int) ($_POST['items'] ?? $selected['items']);
-    $selected['status'] = $_POST['status'] ?? $selected['status'];
-    $update_success = true;
+    $tanggal     = $_POST['tanggal'] ?? date('Y-m-d H:i:s');
+    $total_harga = (int) ($_POST['total_harga'] ?? 0);
+    $status      = mysqli_real_escape_string($koneksi, $_POST['status'] ?? 'pending');
+
+    if ($total_harga >= 0) {
+        // Query UPDATE sesuai skema tabel transaksi
+        $sql_update = "UPDATE transaksi SET 
+                        tanggal = '$tanggal', 
+                        total_harga = '$total_harga', 
+                        status = '$status' 
+                       WHERE id_transaksi = $id";
+        
+        if (mysqli_query($koneksi, $sql_update)) {
+            header('Location: ../../views/admin/transaksi.php?updated=1');
+            exit;
+        } else {
+            $error = "Gagal memperbarui database: " . mysqli_error($koneksi);
+        }
+    } else {
+        $error = "Total harga tidak valid.";
+    }
 }
 ?>
 
@@ -75,58 +84,72 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <h1 class="text-xl font-bold text-gray-900">Edit Transaksi</h1>
                 <div class="w-10"></div>
             </div>
-            <p class="text-sm text-gray-700">Perubahan hanya simulasi, belum update database.</p>
+            <p class="text-sm text-gray-700">Perbarui rincian transaksi di database sistem.</p>
         </div>
 
         <div class="flex-1 px-6 pt-6 pb-12 space-y-6 overflow-y-auto">
-            <?php if ($update_success): ?>
-            <div class="bg-blue-100 text-blue-700 px-4 py-3 rounded-2xl shadow-sm">
-                <p class="font-semibold">Transaksi dummy diperbarui!</p>
-                <p class="text-sm mt-1">Invoice: <?= htmlspecialchars($selected['no_invoice']) ?></p>
+            
+            <?php if ($error !== ''): ?>
+            <div class="bg-red-100 text-red-700 px-4 py-3 rounded-2xl shadow-sm text-xs italic">
+                <?= $error ?>
             </div>
             <?php endif; ?>
 
-            <div class="bg-white rounded-2xl p-4 shadow-sm">
-                <p class="text-xs text-gray-400 uppercase tracking-wide">No. Invoice</p>
-                <h3 class="font-bold text-gray-800"><?= htmlspecialchars($selected['no_invoice']) ?></h3>
-                <p class="text-xs text-gray-500 mt-1"><?= date('d M Y H:i', strtotime($selected['tanggal'])) ?> WIB</p>
+            <div class="bg-white rounded-3xl p-5 shadow-sm border border-gray-100">
+                <p class="text-[10px] text-gray-400 uppercase font-bold tracking-widest">Detail Siswa</p>
+                <h3 class="font-bold text-gray-800 text-lg"><?= htmlspecialchars($selected['nama_siswa']) ?></h3>
+                <div class="mt-2 pt-2 border-t border-dashed border-gray-100">
+                    <p class="text-[10px] text-gray-400 uppercase font-bold tracking-widest">ID Transaksi</p>
+                    <p class="font-mono text-sm text-gray-600">#<?= $selected['id_transaksi'] ?></p>
+                </div>
             </div>
 
             <form method="POST" class="space-y-4">
                 <div>
-                    <label class="block text-sm text-gray-600 mb-1">Nama Anggota</label>
-                    <input type="text" name="anggota" required value="<?= htmlspecialchars($selected['anggota']) ?>" class="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-primary/80 focus:outline-none shadow-sm bg-white">
+                    <label class="block text-sm font-semibold text-gray-600 mb-1">Tanggal & Jam</label>
+                    <input type="datetime-local" name="tanggal" required 
+                           value="<?= date('Y-m-d\TH:i', strtotime($selected['tanggal'])) ?>" 
+                           class="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-primary/80 focus:outline-none shadow-sm bg-white">
                 </div>
+
                 <div>
-                    <label class="block text-sm text-gray-600 mb-1">Tanggal & Jam</label>
-                    <input type="datetime-local" name="tanggal" required value="<?= htmlspecialchars(date('Y-m-d\TH:i', strtotime($selected['tanggal']))) ?>" class="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-primary/80 focus:outline-none shadow-sm bg-white">
+                    <label class="block text-sm font-semibold text-gray-600 mb-1">Total Harga (Rp)</label>
+                    <input type="number" name="total_harga" min="0" required 
+                           value="<?= $selected['total_harga'] ?>" 
+                           class="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-primary/80 focus:outline-none shadow-sm bg-white font-bold text-gray-800">
                 </div>
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-sm text-gray-600 mb-1">Total (Rp)</label>
-                        <input type="number" name="total" min="0" required value="<?= htmlspecialchars($selected['total']) ?>" class="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-primary/80 focus:outline-none shadow-sm bg-white">
-                    </div>
-                    <div>
-                        <label class="block text-sm text-gray-600 mb-1">Jumlah Item</label>
-                        <input type="number" name="items" min="1" required value="<?= htmlspecialchars($selected['items']) ?>" class="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-primary/80 focus:outline-none shadow-sm bg-white">
-                    </div>
-                </div>
+
                 <div>
-                    <label class="block text-sm text-gray-600 mb-2">Status</label>
-                    <div class="flex gap-3">
-                        <?php foreach (['Lunas', 'Pending'] as $status): ?>
-                        <label class="flex-1 border rounded-2xl px-4 py-3 text-center cursor-pointer <?= ($selected['status'] === $status) ? 'border-gray-900 text-gray-900 font-semibold' : 'border-gray-200 text-gray-500' ?>">
-                            <input type="radio" name="status" value="<?= $status ?>" class="hidden" <?= $selected['status'] === $status ? 'checked' : '' ?>>
-                            <?= $status ?>
+                    <label class="block text-sm font-semibold text-gray-600 mb-2">Status Pembayaran</label>
+                    <div class="grid grid-cols-2 gap-3">
+                        <?php 
+                        // Menyesuaikan status dengan tipe ENUM di database
+                        $status_options = [
+                            'dibayar' => 'LUNAS',
+                            'pending' => 'PENDING'
+                        ];
+                        foreach ($status_options as $val => $label): 
+                            $is_active = ($selected['status'] === $val);
+                        ?>
+                        <label class="border rounded-2xl px-4 py-3 text-center cursor-pointer transition-all 
+                                    <?= $is_active ? 'bg-gray-900 border-gray-900 text-white font-bold' : 'bg-white border-gray-200 text-gray-500' ?>">
+                            <input type="radio" name="status" value="<?= $val ?>" class="hidden" <?= $is_active ? 'checked' : '' ?>>
+                            <?= $label ?>
                         </label>
                         <?php endforeach; ?>
                     </div>
                 </div>
 
-                <button type="submit" class="w-full bg-gray-900 text-white py-3 rounded-2xl shadow-lg hover:bg-gray-800 transition font-semibold">Update (Dummy)</button>
+                <div class="pt-6">
+                    <button type="submit" class="w-full bg-gray-900 text-white py-4 rounded-3xl shadow-xl hover:bg-gray-800 transition font-bold text-lg">
+                        Simpan Perubahan
+                    </button>
+                    <a href="../../views/admin/transaksi.php" class="block text-center mt-4 text-sm text-gray-400 font-medium hover:text-gray-700">
+                        Batalkan
+                    </a>
+                </div>
             </form>
         </div>
     </div>
 </body>
 </html>
-

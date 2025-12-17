@@ -1,24 +1,37 @@
 <?php
-$form_success = false;
-$submitted_data = [
-    'no_invoice' => 'TRX-' . date('Ymd-His'),
-    'anggota' => '',
-    'tanggal' => date('Y-m-d\TH:i'),
-    'total' => '',
-    'items' => 1,
-    'status' => 'Lunas',
-];
+require_once '../../config/koneksi.php';
+
+// 1. Generate Nomor Invoice Otomatis (Format: TRX-20251217-XXXX)
+$no_invoice_otomatis = 'TRX-' . date('Ymd') . '-' . strtoupper(substr(md5(uniqid()), 0, 4));
+
+$error = '';
+$success = false;
+
+// 2. Ambil daftar anggota (siswa) untuk dropdown
+$list_anggota = mysqli_query($koneksi, "SELECT id_user, nama FROM users WHERE role = 'siswa' ORDER BY nama ASC");
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $submitted_data = [
-        'no_invoice' => $_POST['no_invoice'] ?? $submitted_data['no_invoice'],
-        'anggota' => $_POST['anggota'] ?? '',
-        'tanggal' => $_POST['tanggal'] ?? date('Y-m-d\TH:i'),
-        'total' => (int) ($_POST['total'] ?? 0),
-        'items' => (int) ($_POST['items'] ?? 1),
-        'status' => $_POST['status'] ?? 'Lunas',
-    ];
-    $form_success = true;
+    // Ambil data dari form
+    $id_user     = (int)($_POST['id_user'] ?? 0);
+    $tanggal     = $_POST['tanggal'] ?? date('Y-m-d H:i:s');
+    $total_harga = (int)($_POST['total_harga'] ?? 0);
+    $status      = mysqli_real_escape_string($koneksi, $_POST['status'] ?? 'pending');
+
+    if ($id_user > 0 && $total_harga > 0) {
+        // Query INSERT sesuai struktur tabel 'transaksi' di database
+        // Kolom: id_transaksi (AI), id_user, tanggal, total_harga, status
+        $sql = "INSERT INTO transaksi (id_user, tanggal, total_harga, status) 
+                VALUES ('$id_user', '$tanggal', '$total_harga', '$status')";
+
+        if (mysqli_query($koneksi, $sql)) {
+            header('Location: ../../views/admin/transaksi.php?success=1');
+            exit;
+        } else {
+            $error = "Gagal menyimpan transaksi: " . mysqli_error($koneksi);
+        }
+    } else {
+        $error = "Pilih anggota dan masukkan total harga dengan benar.";
+    }
 }
 ?>
 
@@ -35,10 +48,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             theme: {
                 extend: {
                     fontFamily: { sans: ['Poppins', 'sans-serif'] },
-                    colors: {
-                        'primary': '#FACC15',
-                        'bg-soft': '#F0FDF4',
-                    }
+                    colors: { 'primary': '#FACC15', 'bg-soft': '#F0FDF4' }
                 }
             }
         }
@@ -56,57 +66,63 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <h1 class="text-xl font-bold text-gray-900">Transaksi Baru</h1>
                 <div class="w-10"></div>
             </div>
-            <p class="text-sm text-gray-700">Masih dummy, belum mencatat ke database.</p>
+            <p class="text-sm text-gray-700 font-medium italic">Catat transaksi penjualan ke database.</p>
         </div>
 
         <div class="flex-1 px-6 pt-6 pb-12 space-y-6 overflow-y-auto">
-            <?php if ($form_success): ?>
-            <div class="bg-green-100 text-green-700 px-4 py-3 rounded-2xl shadow-sm">
-                <p class="font-semibold">Transaksi dummy tersimpan!</p>
-                <p class="text-sm mt-1">Invoice: <span class="font-medium"><?= htmlspecialchars($submitted_data['no_invoice']) ?></span></p>
-                <p class="text-sm">Total: <span class="font-medium">Rp <?= number_format($submitted_data['total'], 0, ',', '.') ?></span></p>
-            </div>
+            <?php if ($error): ?>
+                <div class="bg-red-100 text-red-700 px-4 py-3 rounded-2xl text-xs font-semibold"><?= $error ?></div>
             <?php endif; ?>
 
-            <form method="POST" class="space-y-4">
+            <form method="POST" class="space-y-5">
                 <div>
-                    <label class="block text-sm text-gray-600 mb-1">No. Invoice</label>
-                    <input type="text" name="no_invoice" required value="<?= htmlspecialchars($submitted_data['no_invoice']) ?>" class="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-primary/80 focus:outline-none shadow-sm bg-white">
+                    <label class="block text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-1">No. Invoice</label>
+                    <input type="text" value="<?= $no_invoice_otomatis ?>" readonly class="w-full px-4 py-3 rounded-2xl border border-gray-100 bg-gray-50 text-gray-500 font-mono text-sm focus:outline-none cursor-not-allowed">
+                    <p class="text-[10px] text-gray-400 mt-1 italic">*Dihasilkan secara otomatis oleh sistem</p>
                 </div>
+
                 <div>
-                    <label class="block text-sm text-gray-600 mb-1">Nama Anggota</label>
-                    <input type="text" name="anggota" required value="<?= htmlspecialchars($submitted_data['anggota']) ?>" class="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-primary/80 focus:outline-none shadow-sm bg-white" placeholder="contoh: Ahmad Dhani">
+                    <label class="block text-[11px] font-bold text-gray-600 uppercase tracking-widest mb-1">Anggota (Siswa)</label>
+                    <select name="id_user" required class="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-primary/80 focus:outline-none shadow-sm bg-white appearance-none">
+                        <option value="">-- Pilih Siswa --</option>
+                        <?php while($agt = mysqli_fetch_assoc($list_anggota)): ?>
+                            <option value="<?= $agt['id_user'] ?>"><?= htmlspecialchars($agt['nama']) ?></option>
+                        <?php endwhile; ?>
+                    </select>
                 </div>
+
                 <div>
-                    <label class="block text-sm text-gray-600 mb-1">Tanggal & Jam</label>
-                    <input type="datetime-local" name="tanggal" required value="<?= htmlspecialchars($submitted_data['tanggal']) ?>" class="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-primary/80 focus:outline-none shadow-sm bg-white">
+                    <label class="block text-[11px] font-bold text-gray-600 uppercase tracking-widest mb-1">Tanggal & Waktu</label>
+                    <input type="datetime-local" name="tanggal" required value="<?= date('Y-m-d\TH:i') ?>" class="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-primary/80 focus:outline-none shadow-sm bg-white">
                 </div>
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-sm text-gray-600 mb-1">Total (Rp)</label>
-                        <input type="number" name="total" min="0" required value="<?= htmlspecialchars($submitted_data['total']) ?>" class="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-primary/80 focus:outline-none shadow-sm bg-white">
-                    </div>
-                    <div>
-                        <label class="block text-sm text-gray-600 mb-1">Jumlah Item</label>
-                        <input type="number" name="items" min="1" required value="<?= htmlspecialchars($submitted_data['items']) ?>" class="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-primary/80 focus:outline-none shadow-sm bg-white">
-                    </div>
-                </div>
+
                 <div>
-                    <label class="block text-sm text-gray-600 mb-2">Status</label>
+                    <label class="block text-[11px] font-bold text-gray-600 uppercase tracking-widest mb-1">Total Harga (Rp)</label>
+                    <input type="number" name="total_harga" min="0" required placeholder="0" class="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-primary/80 focus:outline-none shadow-sm bg-white font-bold text-lg text-gray-800">
+                </div>
+
+                <div>
+                    <label class="block text-[11px] font-bold text-gray-600 uppercase tracking-widest mb-2">Status Pembayaran</label>
                     <div class="flex gap-3">
-                        <?php foreach (['Lunas', 'Pending'] as $status): ?>
-                        <label class="flex-1 border rounded-2xl px-4 py-3 text-center cursor-pointer <?= ($submitted_data['status'] === $status) ? 'border-gray-900 text-gray-900 font-semibold' : 'border-gray-200 text-gray-500' ?>">
-                            <input type="radio" name="status" value="<?= $status ?>" class="hidden" <?= $submitted_data['status'] === $status ? 'checked' : '' ?>>
-                            <?= $status ?>
+                        <label class="flex-1 border rounded-2xl px-4 py-4 text-center cursor-pointer transition-all hover:bg-white has-[:checked]:bg-gray-900 has-[:checked]:text-white">
+                            <input type="radio" name="status" value="dibayar" class="hidden" checked>
+                            <span class="text-sm font-bold">LUNAS</span>
                         </label>
-                        <?php endforeach; ?>
+                        <label class="flex-1 border rounded-2xl px-4 py-4 text-center cursor-pointer transition-all hover:bg-white has-[:checked]:bg-gray-900 has-[:checked]:text-white">
+                            <input type="radio" name="status" value="pending" class="hidden">
+                            <span class="text-sm font-bold">PENDING</span>
+                        </label>
                     </div>
                 </div>
 
-                <button type="submit" class="w-full bg-gray-900 text-white py-3 rounded-2xl shadow-lg hover:bg-gray-800 transition font-semibold">Simpan (Dummy)</button>
+                <div class="pt-6">
+                    <button type="submit" class="w-full bg-gray-900 text-white py-4 rounded-3xl shadow-xl hover:bg-gray-800 transition transform active:scale-95 font-bold">
+                        Simpan Transaksi
+                    </button>
+                    <a href="../../views/admin/transaksi.php" class="block text-center mt-4 text-sm text-gray-400 font-medium">Batalkan</a>
+                </div>
             </form>
         </div>
     </div>
 </body>
 </html>
-

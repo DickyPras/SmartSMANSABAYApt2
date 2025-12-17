@@ -1,51 +1,56 @@
 <?php
-$data_produk = [
-    [
-        "id" => 1,
-        "nama" => "Teh Pucuk Harum 350ml",
-        "kategori" => "Minuman",
-        "harga" => 4000,
-        "stok" => 24,
-        "gambar" => "https://assets.klikindomaret.com/products/20042075/20042075_1.jpg" 
-    ],
-    [
-        "id" => 2,
-        "nama" => "Roti Oksis Coklat",
-        "kategori" => "Makanan",
-        "harga" => 2500,
-        "stok" => 5,
-        "gambar" => "https://images.tokopedia.net/img/cache/700/VqbcmM/2022/6/15/8d10350d-6e83-490b-ba65-8cc080214c77.jpg"
-    ],
-    [
-        "id" => 3,
-        "nama" => "Pulpen Standard AE7",
-        "kategori" => "Alat Tulis",
-        "harga" => 3000,
-        "stok" => 0,
-        "gambar" => "https://down-id.img.susercontent.com/file/id-11134207-7r98o-lsmg3e6z63n2eb"
-    ],
-    [
-        "id" => 4,
-        "nama" => "Buku Tulis Sidu 38",
-        "kategori" => "Alat Tulis",
-        "harga" => 5000,
-        "stok" => 50,
-        "gambar" => "https://static.bmdstatic.com/pk/product/medium/5c6b6d5186088.jpg"
-    ]
-];
+require_once '../../config/koneksi.php';
 
-$id = (int) ($_GET['id'] ?? 1);
-$selected = array_values(array_filter($data_produk, fn($row) => $row['id'] === $id))[0] ?? $data_produk[0];
+// 1. Ambil ID dari URL dan validasi data produk
+$id = (int) ($_GET['id'] ?? 0);
+$selected = null;
+$error = '';
 
-$update_success = false;
+if ($id > 0) {
+    // Ambil data produk berdasarkan id_barang
+    $res = mysqli_query($koneksi, "SELECT * FROM barang WHERE id_barang = $id LIMIT 1");
+    if ($res && mysqli_num_rows($res) > 0) {
+        $selected = mysqli_fetch_assoc($res);
+    }
+}
 
+// Redirect jika produk tidak ditemukan
+if (!$selected) {
+    header('Location: ../../views/admin/produk.php');
+    exit;
+}
+
+// 2. Ambil daftar kategori untuk dropdown
+$list_kategori = mysqli_query($koneksi, "SELECT * FROM kategori_barang ORDER BY nama_kategori ASC");
+
+// 3. Proses Update Data
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $selected['nama'] = $_POST['nama'] ?? $selected['nama'];
-    $selected['kategori'] = $_POST['kategori'] ?? $selected['kategori'];
-    $selected['harga'] = (int) ($_POST['harga'] ?? $selected['harga']);
-    $selected['stok'] = (int) ($_POST['stok'] ?? $selected['stok']);
-    $selected['gambar'] = $_POST['gambar'] ?? $selected['gambar'];
-    $update_success = true;
+    $nama        = trim(mysqli_real_escape_string($koneksi, $_POST['nama'] ?? ''));
+    $id_kategori = (int)($_POST['id_kategori'] ?? 0);
+    $harga       = (int)($_POST['harga'] ?? 0);
+    $stok        = (int)($_POST['stok'] ?? 0);
+    $satuan      = trim(mysqli_real_escape_string($koneksi, $_POST['satuan'] ?? ''));
+    $gambar      = trim(mysqli_real_escape_string($koneksi, $_POST['gambar'] ?? ''));
+
+    if ($nama !== '' && $id_kategori > 0 && $harga >= 0) {
+        $sql_update = "UPDATE barang SET 
+                        id_kategori = '$id_kategori',
+                        nama_barang = '$nama',
+                        harga = '$harga',
+                        stok = '$stok',
+                        satuan = '$satuan',
+                        gambar = '$gambar'
+                       WHERE id_barang = $id";
+
+        if (mysqli_query($koneksi, $sql_update)) {
+            header('Location: ../../views/admin/produk.php?updated=1');
+            exit;
+        } else {
+            $error = "Gagal memperbarui data: " . mysqli_error($koneksi);
+        }
+    } else {
+        $error = "Nama, Kategori, dan Harga wajib diisi dengan benar.";
+    }
 }
 ?>
 
@@ -62,10 +67,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             theme: {
                 extend: {
                     fontFamily: { sans: ['Poppins', 'sans-serif'] },
-                    colors: {
-                        'primary': '#FACC15',
-                        'bg-soft': '#F0FDF4',
-                    }
+                    colors: { 'primary': '#FACC15', 'bg-soft': '#F0FDF4' }
                 }
             }
         }
@@ -83,56 +85,69 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <h1 class="text-xl font-bold text-gray-900">Edit Produk</h1>
                 <div class="w-10"></div>
             </div>
-            <p class="mt-2 text-sm text-gray-700">Perubahan hanya bersifat dummy.</p>
+            <p class="mt-2 text-sm text-gray-700">Perbarui informasi produk di sistem.</p>
         </div>
 
         <div class="flex-1 px-6 pt-6 pb-12 space-y-6 overflow-y-auto">
-            <?php if ($update_success): ?>
-            <div class="bg-blue-100 text-blue-700 px-4 py-3 rounded-2xl shadow-sm">
-                <p class="font-semibold">Data dummy diperbarui!</p>
-                <p class="text-sm mt-1">Terakhir diubah: <?= date('d/m/Y H:i') ?></p>
-            </div>
+            <?php if ($error): ?>
+                <div class="bg-red-100 text-red-700 px-4 py-3 rounded-2xl text-xs"><?= $error ?></div>
             <?php endif; ?>
 
-            <?php if (!empty($selected['gambar'])): ?>
-            <div class="bg-white p-4 rounded-2xl shadow-sm">
-                <p class="text-xs text-gray-500 mb-2">Gambar Produk</p>
-                <div class="w-32 h-32 bg-gray-100 rounded-xl overflow-hidden">
-                    <img src="<?= htmlspecialchars($selected['gambar']) ?>" alt="<?= htmlspecialchars($selected['nama']) ?>" class="w-full h-full object-cover">
+            <div class="bg-white p-4 rounded-3xl shadow-sm border border-gray-100 flex items-center gap-4">
+                <div class="w-20 h-20 bg-gray-50 rounded-2xl overflow-hidden border border-gray-100">
+                    <?php if (!empty($selected['gambar'])): ?>
+                        <img src="<?= htmlspecialchars($selected['gambar']) ?>" class="w-full h-full object-cover">
+                    <?php else: ?>
+                        <div class="w-full h-full flex items-center justify-center text-[10px] text-gray-400">No Image</div>
+                    <?php endif; ?>
+                </div>
+                <div>
+                    <p class="text-[10px] font-bold text-gray-400 uppercase">Produk ID: #<?= $selected['id_barang'] ?></p>
+                    <p class="font-bold text-gray-800 leading-tight"><?= htmlspecialchars($selected['nama_barang']) ?></p>
                 </div>
             </div>
-            <?php endif; ?>
 
             <form method="POST" class="space-y-4">
                 <div>
-                    <label class="block text-sm text-gray-600 mb-1">Nama Produk</label>
-                    <input type="text" name="nama" required value="<?= htmlspecialchars($selected['nama']) ?>" class="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-primary/80 focus:outline-none shadow-sm bg-white">
-                </div>
-                <div>
-                    <label class="block text-sm text-gray-600 mb-1">Kategori</label>
-                    <select name="kategori" required class="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-primary/80 focus:outline-none shadow-sm bg-white">
-                        <option value="Makanan" <?= $selected['kategori'] === 'Makanan' ? 'selected' : '' ?>>Makanan</option>
-                        <option value="Minuman" <?= $selected['kategori'] === 'Minuman' ? 'selected' : '' ?>>Minuman</option>
-                        <option value="Alat Tulis" <?= $selected['kategori'] === 'Alat Tulis' ? 'selected' : '' ?>>Alat Tulis</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-sm text-gray-600 mb-1">Harga (Rp)</label>
-                    <input type="number" name="harga" required value="<?= htmlspecialchars($selected['harga']) ?>" class="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-primary/80 focus:outline-none shadow-sm bg-white" min="0">
-                </div>
-                <div>
-                    <label class="block text-sm text-gray-600 mb-1">Stok</label>
-                    <input type="number" name="stok" required value="<?= htmlspecialchars($selected['stok']) ?>" class="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-primary/80 focus:outline-none shadow-sm bg-white" min="0">
-                </div>
-                <div>
-                    <label class="block text-sm text-gray-600 mb-1">URL Gambar</label>
-                    <input type="url" name="gambar" value="<?= htmlspecialchars($selected['gambar']) ?>" class="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-primary/80 focus:outline-none shadow-sm bg-white" placeholder="https://example.com/image.jpg">
+                    <label class="block text-sm font-medium text-gray-600 mb-1">Nama Produk</label>
+                    <input type="text" name="nama" required value="<?= htmlspecialchars($selected['nama_barang']) ?>" class="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-primary/80 focus:outline-none shadow-sm bg-white">
                 </div>
 
-                <button type="submit" class="w-full bg-gray-900 text-white py-3 rounded-2xl shadow-lg hover:bg-gray-800 transition font-semibold">Update (Dummy)</button>
+                <div>
+                    <label class="block text-sm font-medium text-gray-600 mb-1">Kategori</label>
+                    <select name="id_kategori" required class="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-primary/80 focus:outline-none shadow-sm bg-white">
+                        <?php while($kat = mysqli_fetch_assoc($list_kategori)): ?>
+                            <option value="<?= $kat['id_kategori'] ?>" <?= $selected['id_kategori'] == $kat['id_kategori'] ? 'selected' : '' ?>>
+                                <?= htmlspecialchars($kat['nama_kategori']) ?>
+                            </option>
+                        <?php endwhile; ?>
+                    </select>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Harga (Rp)</label>
+                        <input type="number" name="harga" required value="<?= $selected['harga'] ?>" class="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-primary/80 focus:outline-none shadow-sm bg-white" min="0">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Satuan</label>
+                        <input type="text" name="satuan" value="<?= htmlspecialchars($selected['satuan']) ?>" class="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-primary/80 focus:outline-none shadow-sm bg-white">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-600 mb-1">Stok Tersedia</label>
+                    <input type="number" name="stok" required value="<?= $selected['stok'] ?>" class="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-primary/80 focus:outline-none shadow-sm bg-white" min="0">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-600 mb-1">URL Gambar Baru</label>
+                    <input type="url" name="gambar" value="<?= htmlspecialchars($selected['gambar']) ?>" class="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-primary/80 focus:outline-none shadow-sm bg-white" placeholder="https://...">
+                </div>
+
+                <button type="submit" class="w-full bg-gray-900 text-white py-4 rounded-2xl shadow-lg hover:bg-gray-800 transition font-bold mt-4">Simpan Perubahan</button>
             </form>
         </div>
     </div>
 </body>
 </html>
-

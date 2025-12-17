@@ -1,15 +1,32 @@
 <?php
-$form_success = false;
-$submitted_data = [];
+require_once '../../config/koneksi.php';
+
+$error = '';
+$success = false;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $submitted_data = [
-        'nama' => trim($_POST['nama'] ?? ''),
-        'jumlah_produk' => (int) ($_POST['jumlah_produk'] ?? 0),
-        'icon' => $_POST['icon'] ?? '📦',
-        'warna' => $_POST['warna'] ?? 'bg-gray-100 text-gray-600',
-    ];
-    $form_success = true;
+    // Sanitasi input sesuai tabel kategori_barang
+    $nama = trim(mysqli_real_escape_string($koneksi, $_POST['nama'] ?? ''));
+    $icon = trim(mysqli_real_escape_string($koneksi, $_POST['icon'] ?? ''));
+    $deskripsi_input = trim(mysqli_real_escape_string($koneksi, $_POST['deskripsi'] ?? ''));
+    
+    // Menggabungkan icon ke dalam deskripsi agar tersimpan di database yang ada
+    $deskripsi_final = "Icon: " . $icon . " | " . $deskripsi_input;
+
+    if ($nama !== '') {
+        // Query INSERT sesuai struktur esmart_db
+        $sql = "INSERT INTO kategori_barang (nama_kategori, deskripsi) VALUES ('$nama', '$deskripsi_final')";
+        
+        if (mysqli_query($koneksi, $sql)) {
+            // Redirect kembali ke daftar kategori dengan pesan sukses
+            header('Location: ../../views/admin/kategori.php?success=1');
+            exit;
+        } else {
+            $error = "Gagal menyimpan: " . mysqli_error($koneksi);
+        }
+    } else {
+        $error = "Nama kategori tidak boleh kosong.";
+    }
 }
 ?>
 
@@ -47,56 +64,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <h1 class="text-xl font-bold text-gray-900">Tambah Kategori</h1>
                 <div class="w-10"></div>
             </div>
-            <p class="text-sm text-gray-700">Masih dummy, belum tersambung database.</p>
+            <p class="text-sm text-gray-700">Tambahkan kategori barang baru ke dalam sistem.</p>
         </div>
 
         <div class="flex-1 px-6 pt-6 pb-12 space-y-6 overflow-y-auto">
-            <?php if ($form_success): ?>
-            <div class="bg-green-100 text-green-700 px-4 py-3 rounded-2xl shadow-sm">
-                <p class="font-semibold">Kategori dummy tersimpan!</p>
-                <p class="text-sm mt-1">Nama: <span class="font-medium"><?= htmlspecialchars($submitted_data['nama']) ?></span></p>
-                <p class="text-sm">Jumlah Produk: <span class="font-medium"><?= htmlspecialchars($submitted_data['jumlah_produk']) ?></span></p>
-                <p class="text-sm">Icon: <span class="font-medium text-lg"><?= htmlspecialchars($submitted_data['icon']) ?></span></p>
+            
+            <?php if ($error !== ''): ?>
+            <div class="bg-red-100 text-red-700 px-4 py-3 rounded-2xl shadow-sm text-xs italic">
+                <?= $error ?>
             </div>
             <?php endif; ?>
 
             <form method="POST" class="space-y-4">
                 <div>
-                    <label class="block text-sm text-gray-600 mb-1">Nama Kategori</label>
-                    <input type="text" name="nama" required value="<?= htmlspecialchars($submitted_data['nama'] ?? '') ?>" class="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-primary/80 focus:outline-none shadow-sm bg-white" placeholder="contoh: Minuman Dingin">
-                </div>
-                <div>
-                    <label class="block text-sm text-gray-600 mb-1">Jumlah Produk</label>
-                    <input type="number" name="jumlah_produk" min="0" required value="<?= htmlspecialchars($submitted_data['jumlah_produk'] ?? 0) ?>" class="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-primary/80 focus:outline-none shadow-sm bg-white">
-                </div>
-                <div>
-                    <label class="block text-sm text-gray-600 mb-1">Icon (Emoji)</label>
-                    <input type="text" name="icon" maxlength="4" value="<?= htmlspecialchars($submitted_data['icon'] ?? '📦') ?>" class="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-primary/80 focus:outline-none shadow-sm bg-white" placeholder="contoh: 🥤">
-                    <p class="text-xs text-gray-500 mt-1">Gunakan emoji agar konsisten dengan tampilan kartu kategori.</p>
-                </div>
-                <div>
-                    <label class="block text-sm text-gray-600 mb-1">Skema Warna</label>
-                    <select name="warna" class="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-primary/80 focus:outline-none shadow-sm bg-white">
-                        <?php
-                        $options = [
-                            'bg-orange-100 text-orange-600' => 'Oranye (cocok untuk makanan)',
-                            'bg-blue-100 text-blue-600' => 'Biru (cocok untuk minuman)',
-                            'bg-purple-100 text-purple-600' => 'Ungu (alat tulis)',
-                            'bg-pink-100 text-pink-600' => 'Pink (fashion)',
-                            'bg-gray-100 text-gray-600' => 'Abu (umum)',
-                        ];
-                        $selected_color = $submitted_data['warna'] ?? 'bg-gray-100 text-gray-600';
-                        foreach ($options as $value => $label):
-                        ?>
-                            <option value="<?= $value ?>" <?= $selected_color === $value ? 'selected' : '' ?>><?= $label ?></option>
-                        <?php endforeach; ?>
-                    </select>
+                    <label class="block text-sm font-medium text-gray-600 mb-1">Nama Kategori</label>
+                    <input type="text" name="nama" required class="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-primary/80 focus:outline-none shadow-sm bg-white" placeholder="Contoh: Snack & Keripik">
                 </div>
 
-                <button type="submit" class="w-full bg-gray-900 text-white py-3 rounded-2xl shadow-lg hover:bg-gray-800 transition font-semibold">Simpan (Dummy)</button>
+                <div>
+                    <label class="block text-sm font-medium text-gray-600 mb-1">Icon (Emoji)</label>
+                    <input type="text" name="icon" maxlength="4" value="📦" class="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-primary/80 focus:outline-none shadow-sm bg-white" placeholder="contoh: 🥤">
+                    <p class="text-[10px] text-gray-400 mt-1">*Emoji akan disimpan dalam kolom deskripsi.</p>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-600 mb-1">Deskripsi Singkat</label>
+                    <textarea name="deskripsi" rows="3" class="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-primary/80 focus:outline-none shadow-sm bg-white" placeholder="Jelaskan jenis barang dalam kategori ini..."></textarea>
+                </div>
+
+                <div class="pt-4">
+                    <button type="submit" class="w-full bg-gray-900 text-white py-4 rounded-2xl shadow-lg hover:bg-gray-800 transition font-bold">
+                        Simpan Kategori
+                    </button>
+                    <a href="../../views/admin/kategori.php" class="block text-center mt-4 text-sm text-gray-500 hover:text-gray-800 transition">
+                        Batal
+                    </a>
+                </div>
             </form>
         </div>
     </div>
 </body>
 </html>
-

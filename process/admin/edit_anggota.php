@@ -1,39 +1,58 @@
 <?php
-$data_anggota = [
-    [
-        "id" => 1,
-        "nama" => "Ahmad Dhani",
-        "nis" => "12345678",
-        "kelas" => "XII RPL 1",
-        "status" => "Aktif"
-    ],
-    [
-        "id" => 2,
-        "nama" => "Maya Estianty",
-        "nis" => "87654321",
-        "kelas" => "XI TKJ 2",
-        "status" => "Aktif"
-    ],
-    [
-        "id" => 3,
-        "nama" => "Mulan Jameela",
-        "nis" => "11223344",
-        "kelas" => "X AKL 1",
-        "status" => "Non-Aktif"
-    ],
-];
+require_once '../../config/koneksi.php';
 
-$id = (int) ($_GET['id'] ?? 1);
-$selected = array_values(array_filter($data_anggota, fn($row) => $row['id'] === $id))[0] ?? $data_anggota[0];
+// Pastikan ID valid dari parameter URL
+$id = (int) ($_GET['id'] ?? 0);
+$selected = null;
+$error = '';
 
-$update_success = false;
+if ($id > 0) {
+    // Mengambil data user berdasarkan id_user sesuai database
+    $res = mysqli_query($koneksi, "SELECT * FROM users WHERE id_user = " . $id . " LIMIT 1");
+    if ($res && mysqli_num_rows($res) > 0) {
+        $selected = mysqli_fetch_assoc($res);
+    }
+}
+
+// Proteksi jika data tidak ditemukan
+if (!$selected) {
+    header('Location: ../../views/admin/anggota.php');
+    exit;
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $selected['nama'] = $_POST['nama'] ?? $selected['nama'];
-    $selected['nis'] = $_POST['nis'] ?? $selected['nis'];
-    $selected['kelas'] = $_POST['kelas'] ?? $selected['kelas'];
-    $selected['status'] = $_POST['status'] ?? $selected['status'];
-    $update_success = true;
+    // Sanitasi input sesuai kolom tabel users
+    $nama = trim(mysqli_real_escape_string($koneksi, $_POST['nama'] ?? ''));
+    $nis = trim(mysqli_real_escape_string($koneksi, $_POST['nis'] ?? ''));
+    $kelas = trim(mysqli_real_escape_string($koneksi, $_POST['kelas'] ?? ''));
+    $email = trim(mysqli_real_escape_string($koneksi, $_POST['email'] ?? ''));
+    $password = $_POST['password'] ?? '';
+
+    if ($nama !== '' && $email !== '' && $nis !== '') {
+        $parts = [];
+        $parts[] = "nama = '" . $nama . "'";
+        $parts[] = "nis = '" . $nis . "'";
+        $parts[] = "kelas = '" . $kelas . "'";
+        $parts[] = "email = '" . $email . "'";
+        
+        // Update password hanya jika diisi oleh admin
+        if ($password !== '') {
+            $hash = password_hash($password, PASSWORD_DEFAULT);
+            $parts[] = "password = '" . $hash . "'";
+        }
+
+        $sql = "UPDATE users SET " . implode(', ', $parts) . " WHERE id_user = " . $id;
+        
+        if (mysqli_query($koneksi, $sql)) {
+            // Redirect dengan notifikasi sukses
+            header('Location: ../../views/admin/anggota.php?updated=1');
+            exit;
+        } else {
+            $error = 'Gagal memperbarui data: ' . mysqli_error($koneksi);
+        }
+    } else {
+        $error = 'Nama, NIS, dan Email wajib diisi.';
+    }
 }
 ?>
 
@@ -71,42 +90,49 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <h1 class="text-xl font-bold text-gray-900">Edit Anggota</h1>
                 <div class="w-10"></div>
             </div>
-            <p class="mt-2 text-sm text-gray-700">Perubahan hanya bersifat dummy.</p>
+            <p class="mt-2 text-sm text-gray-700">Perbarui informasi profil siswa di sistem.</p>
         </div>
 
         <div class="flex-1 px-6 pt-6 pb-12 space-y-6 overflow-y-auto">
-            <?php if ($update_success): ?>
-            <div class="bg-blue-100 text-blue-700 px-4 py-3 rounded-2xl shadow-sm">
-                <p class="font-semibold">Data dummy diperbarui!</p>
-                <p class="text-sm mt-1">Terakhir diubah: <?= date('d/m/Y H:i') ?></p>
+            <?php if ($error !== ''): ?>
+            <div class="bg-red-100 text-red-700 px-4 py-3 rounded-2xl shadow-sm text-xs">
+                <?= $error ?>
             </div>
             <?php endif; ?>
 
             <form method="POST" class="space-y-4">
                 <div>
-                    <label class="block text-sm text-gray-600 mb-1">Nama Lengkap</label>
+                    <label class="block text-sm text-gray-600 mb-1 font-medium">Nama Lengkap</label>
                     <input type="text" name="nama" required value="<?= htmlspecialchars($selected['nama']) ?>" class="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-primary/80 focus:outline-none shadow-sm bg-white">
                 </div>
-                <div>
-                    <label class="block text-sm text-gray-600 mb-1">NIS</label>
-                    <input type="text" name="nis" required value="<?= htmlspecialchars($selected['nis']) ?>" class="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-primary/80 focus:outline-none shadow-sm bg-white">
-                </div>
-                <div>
-                    <label class="block text-sm text-gray-600 mb-1">Kelas</label>
-                    <input type="text" name="kelas" required value="<?= htmlspecialchars($selected['kelas']) ?>" class="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-primary/80 focus:outline-none shadow-sm bg-white">
-                </div>
-                <div>
-                    <label class="block text-sm text-gray-600 mb-1">Status</label>
-                    <select name="status" class="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-primary/80 focus:outline-none shadow-sm bg-white">
-                        <option value="Aktif" <?= $selected['status'] === 'Aktif' ? 'selected' : '' ?>>Aktif</option>
-                        <option value="Non-Aktif" <?= $selected['status'] === 'Non-Aktif' ? 'selected' : '' ?>>Non-Aktif</option>
-                    </select>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm text-gray-600 mb-1 font-medium">NIS</label>
+                        <input type="text" name="nis" required value="<?= htmlspecialchars($selected['nis']) ?>" class="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-primary/80 focus:outline-none shadow-sm bg-white">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-600 mb-1 font-medium">Kelas</label>
+                        <input type="text" name="kelas" required value="<?= htmlspecialchars($selected['kelas']) ?>" class="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-primary/80 focus:outline-none shadow-sm bg-white">
+                    </div>
                 </div>
 
-                <button type="submit" class="w-full bg-gray-900 text-white py-3 rounded-2xl shadow-lg hover:bg-gray-800 transition font-semibold">Update (Dummy)</button>
+                <hr class="border-gray-200">
+
+                <div>
+                    <label class="block text-sm text-gray-600 mb-1 font-medium">Email</label>
+                    <input type="email" name="email" required value="<?= htmlspecialchars($selected['email']) ?>" class="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-primary/80 focus:outline-none shadow-sm bg-white">
+                </div>
+
+                <div>
+                    <label class="block text-sm text-gray-600 mb-1 font-medium">Ganti Password</label>
+                    <input type="password" name="password" class="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-primary/80 focus:outline-none shadow-sm bg-white" placeholder="Kosongkan jika tidak ingin diubah">
+                    <p class="text-[10px] text-gray-400 mt-1">*Admin bisa mereset password siswa di sini.</p>
+                </div>
+
+                <button type="submit" class="w-full bg-gray-900 text-white py-4 rounded-2xl shadow-lg hover:bg-gray-800 transition font-bold mt-4">Simpan Perubahan</button>
             </form>
         </div>
     </div>
 </body>
 </html>
-

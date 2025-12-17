@@ -1,16 +1,55 @@
 <?php
-$form_success = false;
-$submitted_data = [];
+require_once '../../config/koneksi.php';
+
+$error = '';
+$success = false;
+
+// 1. Ambil daftar kategori dari database untuk ditampilkan di dropdown
+$list_kategori = mysqli_query($koneksi, "SELECT id_kategori, nama_kategori FROM kategori_barang ORDER BY nama_kategori ASC");
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $submitted_data = [
-        'nama' => $_POST['nama'] ?? '',
-        'kategori' => $_POST['kategori'] ?? '',
-        'harga' => $_POST['harga'] ?? '',
-        'stok' => $_POST['stok'] ?? '',
-        'gambar' => $_POST['gambar'] ?? '',
-    ];
-    $form_success = true;
+    $nama        = trim(mysqli_real_escape_string($koneksi, $_POST['nama'] ?? ''));
+    $id_kategori = (int)($_POST['id_kategori'] ?? 0);
+    $harga       = (int)($_POST['harga'] ?? 0);
+    $stok        = (int)($_POST['stok'] ?? 0);
+    $satuan      = trim(mysqli_real_escape_string($koneksi, $_POST['satuan'] ?? 'pcs'));
+    $gambar      = trim(mysqli_real_escape_string($koneksi, $_POST['gambar'] ?? ''));
+
+    if ($nama !== '' && $id_kategori > 0 && $harga > 0) {
+        // Mulai Transaksi SQL agar data tersimpan di kedua tabel atau tidak sama sekali
+        mysqli_begin_transaction($koneksi);
+
+        try {
+            // 2. Insert ke tabel barang
+            $sql_barang = "INSERT INTO barang (id_kategori, nama_barang, harga, stok, satuan, gambar) 
+                           VALUES ('$id_kategori', '$nama', '$harga', '$stok', '$satuan', '$gambar')";
+            
+            if (!mysqli_query($koneksi, $sql_barang)) {
+                throw new Exception("Gagal simpan data barang");
+            }
+
+            $id_barang_baru = mysqli_insert_id($koneksi);
+
+            // 3. Insert ke tabel stok_barang sebagai riwayat stok awal
+            $sql_stok = "INSERT INTO stok_barang (id_barang, jumlah, kondisi, keterangan) 
+                         VALUES ('$id_barang_baru', '$stok', 'baik', 'Input produk baru')";
+            
+            if (!mysqli_query($koneksi, $sql_stok)) {
+                throw new Exception("Gagal simpan riwayat stok");
+            }
+
+            // Jika semua berhasil
+            mysqli_commit($koneksi);
+            header('Location: ../../views/admin/produk.php?success=1');
+            exit;
+
+        } catch (Exception $e) {
+            mysqli_rollback($koneksi);
+            $error = "Terjadi kesalahan: " . $e->getMessage();
+        }
+    } else {
+        $error = 'Nama produk, kategori, dan harga wajib diisi.';
+    }
 }
 ?>
 
@@ -27,10 +66,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             theme: {
                 extend: {
                     fontFamily: { sans: ['Poppins', 'sans-serif'] },
-                    colors: {
-                        'primary': '#FACC15',
-                        'bg-soft': '#F0FDF4',
-                    }
+                    colors: { 'primary': '#FACC15', 'bg-soft': '#F0FDF4' }
                 }
             }
         }
@@ -48,52 +84,54 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <h1 class="text-xl font-bold text-gray-900">Tambah Produk</h1>
                 <div class="w-10"></div>
             </div>
-            <p class="mt-2 text-sm text-gray-700">Gunakan data dummy sebelum database siap.</p>
+            <p class="mt-2 text-sm text-gray-700">Masukkan detail produk baru ke database.</p>
         </div>
 
         <div class="flex-1 px-6 pt-6 pb-12 space-y-6 overflow-y-auto">
-            <?php if ($form_success): ?>
-            <div class="bg-green-100 text-green-700 px-4 py-3 rounded-2xl shadow-sm">
-                <p class="font-semibold">Data dummy tersimpan!</p>
-                <p class="text-sm mt-1">Nama: <span class="font-medium"><?= htmlspecialchars($submitted_data['nama']) ?></span></p>
-                <p class="text-sm">Kategori: <span class="font-medium"><?= htmlspecialchars($submitted_data['kategori']) ?></span></p>
-                <p class="text-sm">Harga: <span class="font-medium">Rp <?= number_format((int)$submitted_data['harga'], 0, ',', '.') ?></span></p>
-                <p class="text-sm">Stok: <span class="font-medium"><?= htmlspecialchars($submitted_data['stok']) ?></span></p>
-            </div>
+            <?php if ($error): ?>
+                <div class="bg-red-100 text-red-700 px-4 py-3 rounded-2xl text-sm italic"><?= $error ?></div>
             <?php endif; ?>
 
             <form method="POST" class="space-y-4">
                 <div>
                     <label class="block text-sm text-gray-600 mb-1">Nama Produk</label>
-                    <input type="text" name="nama" required value="<?= htmlspecialchars($submitted_data['nama'] ?? '') ?>" class="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-primary/80 focus:outline-none shadow-sm bg-white" placeholder="Masukkan nama produk">
-                </div>
-                <div>
-                    <label class="block text-sm text-gray-600 mb-1">Kategori</label>
-                    <select name="kategori" required class="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-primary/80 focus:outline-none shadow-sm bg-white">
-                        <option value="">Pilih Kategori</option>
-                        <option value="Makanan" <?= (($submitted_data['kategori'] ?? '') === 'Makanan') ? 'selected' : '' ?>>Makanan</option>
-                        <option value="Minuman" <?= (($submitted_data['kategori'] ?? '') === 'Minuman') ? 'selected' : '' ?>>Minuman</option>
-                        <option value="Alat Tulis" <?= (($submitted_data['kategori'] ?? '') === 'Alat Tulis') ? 'selected' : '' ?>>Alat Tulis</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-sm text-gray-600 mb-1">Harga (Rp)</label>
-                    <input type="number" name="harga" required value="<?= htmlspecialchars($submitted_data['harga'] ?? '') ?>" class="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-primary/80 focus:outline-none shadow-sm bg-white" placeholder="contoh: 5000" min="0">
-                </div>
-                <div>
-                    <label class="block text-sm text-gray-600 mb-1">Stok</label>
-                    <input type="number" name="stok" required value="<?= htmlspecialchars($submitted_data['stok'] ?? '') ?>" class="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-primary/80 focus:outline-none shadow-sm bg-white" placeholder="Jumlah stok" min="0">
-                </div>
-                <div>
-                    <label class="block text-sm text-gray-600 mb-1">URL Gambar</label>
-                    <input type="url" name="gambar" value="<?= htmlspecialchars($submitted_data['gambar'] ?? '') ?>" class="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-primary/80 focus:outline-none shadow-sm bg-white" placeholder="https://example.com/image.jpg">
-                    <p class="text-xs text-gray-500 mt-1">Opsional: Masukkan URL gambar produk</p>
+                    <input type="text" name="nama" required class="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-primary/80 focus:outline-none shadow-sm bg-white" placeholder="Contoh: Aqua 600ml">
                 </div>
 
-                <button type="submit" class="w-full bg-gray-900 text-white py-3 rounded-2xl shadow-lg hover:bg-gray-800 transition font-semibold">Simpan (Dummy)</button>
+                <div>
+                    <label class="block text-sm text-gray-600 mb-1">Kategori</label>
+                    <select name="id_kategori" required class="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-primary/80 focus:outline-none shadow-sm bg-white">
+                        <option value="">Pilih Kategori</option>
+                        <?php while($kat = mysqli_fetch_assoc($list_kategori)): ?>
+                            <option value="<?= $kat['id_kategori'] ?>"><?= $kat['nama_kategori'] ?></option>
+                        <?php endwhile; ?>
+                    </select>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm text-gray-600 mb-1">Harga (Rp)</label>
+                        <input type="number" name="harga" required class="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-primary/80 focus:outline-none shadow-sm bg-white" placeholder="5000">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-600 mb-1">Satuan</label>
+                        <input type="text" name="satuan" class="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-primary/80 focus:outline-none shadow-sm bg-white" placeholder="Botol/Pcs/Gelas" value="Pcs">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm text-gray-600 mb-1">Stok Awal</label>
+                    <input type="number" name="stok" required class="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-primary/80 focus:outline-none shadow-sm bg-white" placeholder="Jumlah stok">
+                </div>
+
+                <div>
+                    <label class="block text-sm text-gray-600 mb-1">URL Gambar</label>
+                    <input type="url" name="gambar" class="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-primary/80 focus:outline-none shadow-sm bg-white" placeholder="https://...">
+                </div>
+
+                <button type="submit" class="w-full bg-gray-900 text-white py-4 rounded-2xl shadow-lg hover:bg-gray-800 transition font-bold mt-4">Simpan Produk</button>
             </form>
         </div>
     </div>
 </body>
 </html>
-
