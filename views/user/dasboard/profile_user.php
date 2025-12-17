@@ -1,15 +1,37 @@
 <?php
+session_start();
+require_once __DIR__ . '/../../../config/koneksi.php';
 
-// --- DATA USER (DUMMY) ---
-$user = [
-    "nama"      => "Senaif Arifin",
-    "kelas"     => "XII MIPA 2",
-    "bio"       => "tetap sakit walau tersakiti",
-    "nis"       => "123456789",
-    "hp"        => "081234567890",
-    "email"     => "senaif@gmail.com",
-    "password"  => "sekolah123"
-];
+// Cek Koneksi
+$db_conn = isset($conn) ? $conn : (isset($koneksi) ? $koneksi : null);
+if (!$db_conn) { die("Error: Koneksi database gagal."); }
+
+// Cek Login (Jika belum login, lempar ke halaman login)
+if (!isset($_SESSION['user_id'])) {
+    header("Location: ../auth/login.php");
+    exit;
+}
+
+$id_user = $_SESSION['user_id'];
+
+// --- AMBIL DATA USER DARI DATABASE ---
+$sql = "SELECT * FROM users WHERE id_user = ?";
+$stmt = $db_conn->prepare($sql);
+$stmt->bind_param("i", $id_user);
+$stmt->execute();
+$result = $stmt->get_result();
+
+if ($result->num_rows > 0) {
+    $user = $result->fetch_assoc();
+} else {
+    // Jika user tidak ditemukan (misal dihapus admin saat login), logout paksa
+    session_destroy();
+    header("Location: ../auth/login.php");
+    exit;
+}
+
+// Default Avatar jika tidak ada foto
+$avatar_url = "https://ui-avatars.com/api/?name=" . urlencode($user['nama']) . "&background=00A859&color=fff&size=128";
 ?>
 
 <!DOCTYPE html>
@@ -90,26 +112,28 @@ $user = [
             
             <div class="flex flex-col items-center -mt-24 mb-5">
                 <div class="p-2 bg-white rounded-full shadow-xl animate-avatar group cursor-pointer">
-                    <img src="https://img.freepik.com/free-vector/businessman-character-avatar-isolated_24877-60111.jpg" 
+                    <img src="<?= $avatar_url ?>" 
                          alt="Profile Avatar" 
                          class="w-28 h-28 rounded-full object-cover border-4 border-primary-green/20 group-hover:scale-105 transition-transform duration-300">
                 </div>
                 
-                <h2 class="text-xl font-bold text-gray-800 mt-3 item-animate delay-200"><?= $user['nama'] ?></h2>
+                <h2 class="text-xl font-bold text-gray-800 mt-3 item-animate delay-200"><?= htmlspecialchars($user['nama']) ?></h2>
                 <span class="text-sm text-primary-green font-bold bg-green-50 px-4 py-1.5 rounded-full mt-2 item-animate delay-200 border border-green-100 shadow-sm">
-                    Siswa Aktif
+                    <?= ucfirst($user['role']) ?> Aktif
                 </span>
             </div>
 
             <div class="space-y-4">
                 
                 <div class="item-animate delay-300">
-                    <h3 class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-3 ml-1">Info Umum</h3>
+                    <h3 class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-3 ml-1">Info Akademik</h3>
                     
                     <?php
                     function displayField($icon, $label, $value, $delay, $isPassword = false) {
                         $type = $isPassword ? 'password' : 'text';
                         $masking = $isPassword ? 'text-2xl tracking-widest' : 'text-sm';
+                        // Jika nilai kosong, tampilkan strip
+                        $displayValue = !empty($value) ? htmlspecialchars($value) : '-';
                         
                         echo "
                         <div class='flex items-center bg-gray-50 p-3.5 rounded-2xl mb-3 border border-gray-100 item-animate $delay hover:border-primary-green/50 hover:bg-green-50/30 transition duration-300 shadow-sm group'>
@@ -119,13 +143,15 @@ $user = [
                             <div class='flex-1 overflow-hidden'>
                                 <label class='block text-[10px] font-bold text-gray-400 uppercase mb-0.5'>$label</label>
                                 <input class='w-full bg-transparent border-none text-gray-700 font-semibold focus:outline-none p-0 $masking truncate' 
-                                       type='$type' value='$value' readonly>
+                                       type='$type' value='$displayValue' readonly>
                             </div>
                         </div>";
                     }
 
+                    // Tampilkan Data dari Database
                     displayField('fa-graduation-cap', 'Kelas', $user['kelas'], 'delay-300');
-                    displayField('fa-quote-left', 'Bio', $user['bio'], 'delay-300');
+                    // Bio tidak ada di struktur tabel Anda, jadi saya pakai statis atau bisa dihapus
+                    // displayField('fa-quote-left', 'Bio', 'Siswa Rajin', 'delay-300'); 
                     ?>
                 </div>
 
@@ -134,9 +160,11 @@ $user = [
                     
                     <?php 
                         displayField('fa-id-card', 'NIS', $user['nis'], 'delay-400');
-                        displayField('fa-phone', 'No HP/WA', $user['hp'], 'delay-400');
+                        // No HP tidak ada di tabel users (berdasarkan SQL Anda), jadi saya hapus atau bisa ditambah manual di DB
+                        // displayField('fa-phone', 'No HP/WA', $user['no_hp'], 'delay-400'); 
                         displayField('fa-envelope', 'Email', $user['email'], 'delay-400');
-                        displayField('fa-lock', 'Password', $user['password'], 'delay-400', true);
+                        // Password tidak ditampilkan demi keamanan, tapi jika ingin menampilkan placeholder bintang:
+                        displayField('fa-lock', 'Password', '********', 'delay-400', true);
                     ?>
                 </div>
 
@@ -144,7 +172,7 @@ $user = [
                     <h3 class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-3 ml-1 pt-2 border-t border-dashed border-gray-200">Pengaturan Akun</h3>
                     
                     <div class="grid grid-cols-2 gap-3 mt-2">
-                        <a href="../auth/login.php" onclick="return confirmLogout(event)" 
+                        <a href="../../user/auth/login.php" onclick="return confirmLogout(event)" 
                            class="group flex flex-col items-center justify-center bg-gray-50 border border-gray-200 
                                   hover:bg-gray-100 hover:border-gray-300 hover:shadow-lg hover:-translate-y-1 
                                   active:scale-95 active:translate-y-0
@@ -163,7 +191,7 @@ $user = [
                         </button>
                     </div>
                 </div>
-                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -176,21 +204,14 @@ $user = [
 
         Swal.fire({
             title: 'Yakin ingin keluar?',
-            text: "Sampai jumpa lagi nanti!",
+            text: "Sesi Anda akan diakhiri.",
             icon: 'question',
             showCancelButton: true,
             confirmButtonColor: '#00A859',
             cancelButtonColor: '#d33',
             confirmButtonText: 'Ya, Logout',
             cancelButtonText: 'Batal',
-            borderRadius: '20px',
-            // Konfigurasi Animasi SweetAlert
-            showClass: {
-                popup: 'animate__animated animate__fadeInDown'
-            },
-            hideClass: {
-                popup: 'animate__animated animate__fadeOutUp'
-            }
+            borderRadius: '20px'
         }).then((result) => {
             if (result.isConfirmed) {
                 window.location.href = href;
@@ -198,35 +219,26 @@ $user = [
         });
     }
 
-    // 2. Fungsi Hapus Akun
+    // 2. Fungsi Hapus Akun (Hanya simulasi UI, perlu backend real untuk menghapus)
     function confirmDelete() {
         Swal.fire({
             title: 'HAPUS AKUN?',
-            text: "Perhatian! Data yang dihapus akan hilang selamanya.",
+            text: "Data Anda akan dihapus permanen dari database.",
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#d33',
             cancelButtonColor: '#3085d6',
             confirmButtonText: 'Hapus Sekarang',
-            cancelButtonText: 'Batalkan',
-            // Konfigurasi Animasi SweetAlert (Tada effect untuk warning)
-            showClass: {
-                popup: 'animate__animated animate__tada'
-            },
-            hideClass: {
-                popup: 'animate__animated animate__fadeOut'
-            }
+            cancelButtonText: 'Batalkan'
         }).then((result) => {
             if (result.isConfirmed) {
+                // Arahkan ke file proses delete (Anda harus buat file ini)
+                // window.location.href = "../../../process/user/auth/delete_account.php";
+                
                 Swal.fire({
-                    title: 'Terhapus!',
-                    text: 'Akun Anda telah dinonaktifkan.',
-                    icon: 'success',
-                    timer: 2000,
-                    showConfirmButton: false,
-                    showClass: { popup: 'animate__animated animate__zoomIn' }
-                }).then(() => {
-                    window.location.href = "../auth/login.php";
+                    title: 'Info',
+                    text: 'Fitur hapus akun belum diaktifkan demi keamanan.',
+                    icon: 'info'
                 });
             }
         })

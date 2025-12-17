@@ -13,6 +13,12 @@ INSERT INTO users (
     SHA2('User123', 256),
     'siswa',
     'XII Mipa 2'
+
+
+    'blackmamba',
+    'blackmamba@gmail.com',
+    SHA2('BlackMamba123),
+
 ),
 (
     '1234567890',

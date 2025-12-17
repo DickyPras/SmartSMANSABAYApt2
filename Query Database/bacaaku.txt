@@ -2,4 +2,4 @@ alur run query
     database
     Barang
     kategori
-    stokbarang
+    stok_barang
