@@ -16,7 +16,7 @@ if (isset($_POST['terima_pesanan'])) {
 }
 
 // --- AMBIL DATA ---
-$sql = "SELECT t.id_transaksi, t.kode_transaksi, t.tanggal, t.total_harga, t.status, b.nama_barang, d.jumlah
+$sql = "SELECT t.id_transaksi, t.kode_transaksi, t.tanggal, t.total_harga, t.status, t.metode_pembayaran, b.nama_barang, d.jumlah
         FROM transaksi t
         JOIN detail_transaksi d ON t.id_transaksi = d.id_transaksi
         JOIN barang b ON d.id_barang = b.id_barang
@@ -29,14 +29,16 @@ $result = $stmt->get_result();
 $orders = [];
 while ($row = $result->fetch_assoc()) {
     $id = $row['id_transaksi'];
-    // Fallback jika kode_transaksi masih kosong (data lama)
     $kode = !empty($row['kode_transaksi']) ? $row['kode_transaksi'] : '#TRX-'.str_pad($id, 4, '0', STR_PAD_LEFT);
     
     if (!isset($orders[$id])) {
         $orders[$id] = [
             'id' => $id, 'code' => $kode,
             'date' => date('d M Y, H:i', strtotime($row['tanggal'])),
-            'status' => $row['status'], 'total' => $row['total_harga'], 'items' => []
+            'status' => $row['status'], 
+            'total' => $row['total_harga'],
+            'metode' => $row['metode_pembayaran'], 
+            'items' => []
         ];
     }
     $orders[$id]['items'][] = $row['nama_barang'] . " (" . $row['jumlah'] . "x)";
@@ -52,7 +54,6 @@ while ($row = $result->fetch_assoc()) {
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        /* TAMPILAN SAMA PERSIS */
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; -webkit-tap-highlight-color: transparent; }
         body { background-color: #F8F9FD; padding-bottom: 100px; }
         a { text-decoration: none; }
@@ -70,7 +71,6 @@ while ($row = $result->fetch_assoc()) {
         .bg-pending { background:#FFF3E0; color:#EF6C00; }
         .bg-dibayar { background:#E3F2FD; color:#1565C0; }
         .bg-selesai { background:#E8F5E9; color:#2E7D32; }
-        .bg-batal { background:#FFEBEE; color:#C62828; }
         .divider { border-bottom: 2px dashed #f0f0f0; margin: 10px 0 15px 0; }
         .menu-list { margin-bottom: 15px; }
         .menu-item { font-size: 13px; color: #555; margin-bottom: 6px; display: flex; justify-content: space-between; }
@@ -82,7 +82,7 @@ while ($row = $result->fetch_assoc()) {
         .btn-outline { background-color: white; color: #00A859; border: 1px solid #00A859; }
         .btn-grey { background-color: #f0f0f0; color: #999; cursor:not-allowed; }
         .pickup-info { background-color: #FFF8E1; color: #F57F17; font-size: 11px; padding: 8px 12px; border-radius: 8px; margin-top: 12px; display: flex; align-items: center; gap: 8px; }
-        .empty-state { text-align: center; margin-top: 80px; color: #bbb; }
+        .payment-method { font-size: 10px; color: #00A859; font-weight: 600; margin-top: 2px; text-transform: uppercase; }
         .bottom-navbar { position: fixed; bottom: 0; left: 0; width: 100%; background-color: white; height: 75px; display: flex; justify-content: space-between; padding: 0 20px; border-top-left-radius: 25px; border-top-right-radius: 25px; box-shadow: 0 -5px 30px rgba(0,0,0,0.08); z-index: 100; }
         .nav-link { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #C4C4C4; font-size: 11px; font-weight: 500;}
         .nav-link i { font-size: 22px; margin-bottom: 6px; }
@@ -113,6 +113,7 @@ while ($row = $result->fetch_assoc()) {
                         <div class="icon-receipt"><i class="fas fa-receipt"></i></div>
                         <div>
                             <div class="order-id-text"><?= $order['code'] ?></div>
+                            <div class="payment-method">Metode: <?= $order['metode'] ?></div>
                             <span class="order-date"><?= $order['date'] ?></span>
                         </div>
                     </div>
@@ -137,6 +138,18 @@ while ($row = $result->fetch_assoc()) {
                     <div>
                         <div class="label-total">Total Bayar</div>
                         <div class="price-total">Rp <?= number_format($order['total'], 0, ',', '.') ?></div>
+                        
+                        <div style="font-size: 10px; margin-top: 4px; font-weight: 600;">
+                            <?php if($order['status'] == 'pending'): ?>
+                                <?php if($order['metode'] == 'COD'): ?>
+                                    <span style="color: #C62828;"><i class="fas fa-exclamation-circle"></i> BELUM BAYAR</span>
+                                <?php else: ?>
+                                    <span style="color: #00A859;"><i class="fas fa-check-circle"></i> SUDAH MEMBAYAR</span>
+                                <?php endif; ?>
+                            <?php else: ?>
+                                <span style="color: #00A859;"><i class="fas fa-check-circle"></i> SUDAH MEMBAYAR</span>
+                            <?php endif; ?>
+                        </div>
                     </div>
                     
                     <?php if($order['status'] == 'dibayar'): ?>
@@ -147,7 +160,7 @@ while ($row = $result->fetch_assoc()) {
                     <?php elseif($order['status'] == 'selesai'): ?>
                         <a href="home.php" class="btn-action btn-outline">Pesan Lagi</a>
                     <?php elseif($order['status'] == 'pending'): ?>
-                        <button class="btn-action btn-grey" disabled>Menunggu Admin</button>
+                        <button class="btn-action btn-grey" disabled>Belum Diambil</button>
                     <?php endif; ?>
                 </div>
 
@@ -159,7 +172,7 @@ while ($row = $result->fetch_assoc()) {
                 
                 <?php if($order['status'] == 'dibayar'): ?>
                 <div class="pickup-info" style="background:#E3F2FD; color:#1565C0;">
-                    <i class="fas fa-bell"></i> Pesanan dikonfirmasi! Silakan ambil barang di kantin.
+                    <i class="fas fa-shopping-bag"></i> <b>Silahkan ambil pesanan di kantin!</b>
                 </div>
                 <?php endif; ?>
 
