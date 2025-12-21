@@ -49,6 +49,7 @@ if ($result) {
             'name'     => $row['nama_barang'],
             'price'    => $row['harga'],
             'image'    => $img_src,
+            'gambar'   => $row['gambar'], // Nama file saja untuk disimpan di session
             'stock'    => $row['total_stok'],
             'category' => $kategori_final
         ];
@@ -77,7 +78,7 @@ if (isset($_POST['tambah_keranjang'])) {
             $_SESSION['keranjang'][$id_produk] = [
                 'nama'   => $produk_terpilih['name'],
                 'harga'  => $produk_terpilih['price'],
-                'gambar' => $produk_terpilih['image'], // Simpan path gambar
+                'gambar' => $produk_terpilih['gambar'], // Simpan nama file saja
                 'qty'    => 1
             ];
         }
